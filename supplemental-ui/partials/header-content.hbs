@@ -11,6 +11,9 @@
       <div class="navbar-item search hide-for-print">
         <div id="search-field" class="field">
           <input id="search-input" type="text" placeholder="Search docs&#8230;"{{#if page.home}} autofocus{{/if}}>
+          {{!-- Hidden checked checkbox activates the built-in facet filter for the current version.
+               search-ui.js reads: #search-field input[type=checkbox][data-facet-filter] --}}
+          <input type="checkbox" data-facet-filter="version:{{page.version}}" checked style="display:none" aria-hidden="true">
         </div>
       </div>
       {{/if}}
