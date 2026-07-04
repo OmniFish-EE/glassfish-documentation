@@ -52,8 +52,9 @@ VERSIONS = [
 
 LATEST_VERSION: str = CONFIG["latest_version"]
 
-GUIDES: list[tuple[str, str]] = [
-    (g["dir"], g["title"]) for g in CONFIG["guides"]
+# Each guide entry: (dir, title, section_or_None)
+GUIDES: list[tuple[str, str, str | None]] = [
+    (g["dir"], g["title"], g.get("section")) for g in CONFIG["guides"]
 ]
 
 # Files to skip (index/list pages not useful as standalone pages)
@@ -278,15 +279,13 @@ nav:
 """
 
     modules = []
-    for guide_name, display_name in GUIDES:
+    for guide_name, display_name, _section in GUIDES:
         module_name = setup_guide_module(src_docs_dir, out_root, guide_name, display_name)
         if module_name:
             modules.append((module_name, display_name))
 
-    # Add nav entries
-    nav_lines = "".join(f"  - modules/{m}/nav.adoc\n" for m, _ in modules)
-    antora_yml = antora_yml_header + nav_lines
-
+    # antora.yml: only ROOT nav — all guide nav is inlined into ROOT/nav.adoc
+    antora_yml = antora_yml_header  # nav already has ROOT entry
     (out_root / "antora.yml").write_text(antora_yml, encoding="utf-8")
 
     # ROOT module
@@ -302,9 +301,22 @@ nav:
 
     index_content = build_index_page(modules, rn_entry)
     (root_pages / "index.adoc").write_text(index_content, encoding="utf-8")
-    (out_root / "modules" / "ROOT" / "nav.adoc").write_text(
-        "* xref:ROOT:index.adoc[Home]\n", encoding="utf-8"
-    )
+
+    # Build combined ROOT nav.adoc with section headers and all guide pages inlined
+    built_module_names = {m for m, _ in modules}
+    root_nav_lines = ["* xref:ROOT:index.adoc[Home]\n"]
+    for guide_name, display_name, section in GUIDES:
+        if guide_name not in built_module_names:
+            continue
+        # Emit section header when a new section starts
+        if section:
+            root_nav_lines.append(f"\n.{section}\n")
+        # Read the guide's own nav.adoc and inline it (already has * and ** entries)
+        guide_nav_path = out_root / "modules" / guide_name / "nav.adoc"
+        if guide_nav_path.exists():
+            root_nav_lines.append(guide_nav_path.read_text(encoding="utf-8"))
+
+    (out_root / "modules" / "ROOT" / "nav.adoc").write_text("".join(root_nav_lines), encoding="utf-8")
 
     print(f"  Done: {len(modules)} guides written to {out_root}")
     return out_root

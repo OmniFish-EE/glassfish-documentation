@@ -20,6 +20,8 @@
 #   Each entry:
 #     dir:     Directory name under docs/ in the GlassFish repository
 #     title:   Display name shown in the navigation sidebar
+#     section: Section heading shown in the sidebar above this group of guides.
+#              Only the first guide in each section needs this field.
 
 versions:
   - version: "8.0-SNAPSHOT"
@@ -55,12 +57,7 @@ latest_version: "8.0.3"
 guides:
   - dir: quick-start-guide
     title: Quick Start Guide
-
-  - dir: installation-guide
-    title: Installation Guide
-
-  - dir: administration-guide
-    title: Administration Guide
+    section: Developer Guides
 
   - dir: application-development-guide
     title: Application Development Guide
@@ -68,35 +65,44 @@ guides:
   - dir: application-deployment-guide
     title: Application Deployment Guide
 
-  - dir: deployment-planning-guide
-    title: Deployment Planning Guide
-
-  - dir: security-guide
-    title: Security Guide
-
-  - dir: performance-tuning-guide
-    title: Performance Tuning Guide
-
-  - dir: ha-administration-guide
-    title: High Availability Administration Guide
-
-  - dir: troubleshooting-guide
-    title: Troubleshooting Guide
-
-  - dir: reference-manual
-    title: Reference Manual
-
-  - dir: error-messages-reference
-    title: Error Messages Reference
-
-  - dir: upgrade-guide
-    title: Upgrade Guide
-
   - dir: embedded-server-guide
     title: Embedded Server Guide
 
   - dir: add-on-component-development-guide
     title: Add-On Component Development Guide
+
+  - dir: installation-guide
+    title: Installation Guide
+    section: Administration Guides
+
+  - dir: administration-guide
+    title: Administration Guide
+
+  - dir: security-guide
+    title: Security Guide
+
+  - dir: ha-administration-guide
+    title: High Availability Administration Guide
+
+  - dir: upgrade-guide
+    title: Upgrade Guide
+
+  - dir: troubleshooting-guide
+    title: Troubleshooting Guide
+
+  - dir: deployment-planning-guide
+    title: Deployment Planning Guide
+    section: Architecture and Planning
+
+  - dir: performance-tuning-guide
+    title: Performance Tuning Guide
+
+  - dir: reference-manual
+    title: Reference Manual
+    section: Reference
+
+  - dir: error-messages-reference
+    title: Error Messages Reference
 
   - dir: release-notes
     title: Release Notes
