@@ -1,0 +1,83 @@
+name: Build and Deploy Documentation
+
+on:
+  # Run on every push to main
+  push:
+    branches: [main]
+  # Run nightly to pick up upstream GlassFish source changes
+  schedule:
+    - cron: '0 3 * * *'
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+# Grant the GITHUB_TOKEN permission to write to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; cancel in-progress runs on new push
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Antora site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Antora
+        run: |
+          npm install -g @antora/cli@3.1 \
+                         @antora/site-generator@3.1 \
+                         @antora/lunr-extension
+
+      - name: Checkout GlassFish source docs (sparse)
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/eclipse-ee4j/glassfish.git glassfish-repo
+          cd glassfish-repo
+          git sparse-checkout set docs
+
+      - name: Transform sources to Antora layout
+        run: python3 build_antora_content.py
+
+      - name: Fix cross-guide xref links
+        run: python3 fix_xrefs.py
+
+      - name: Initialise Antora content git repo
+        run: |
+          cd antora-content
+          git init
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add -A
+          git commit -m "Generated content"
+
+      - name: Build Antora site
+        run: antora antora-playbook.yml --to-dir build/site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

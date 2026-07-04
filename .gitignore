@@ -1,0 +1,11 @@
+# Generated Antora content (built from GlassFish sources at build time)
+antora-content/
+
+# Built site output
+build/
+
+# GlassFish source clone (fetched at build time)
+glassfish-repo/
+
+# Node
+node_modules/

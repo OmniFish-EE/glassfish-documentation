@@ -1,0 +1,35 @@
+site:
+  title: Eclipse GlassFish Documentation
+  url: https://omnifish-ee.github.io/glassfish-documentation
+  start_page: glassfish::ROOT:index.adoc
+
+content:
+  sources:
+    - url: ./antora-content
+      start_path: .
+      branches: HEAD
+
+ui:
+  bundle:
+    url: ./antora-ui-default.zip
+    snapshot: true
+  supplemental_files: ./supplemental-ui
+
+asciidoc:
+  attributes:
+    productName: Eclipse GlassFish
+    product-majorVersion: '8'
+    jakartaee: '10'
+    status: SNAPSHOT
+    source-highlighter: highlight.js
+    icons: font
+    sectanchors: ''
+    idprefix: ''
+    idseparator: '-'
+    toc: ''
+    toclevels: 3
+
+antora:
+  extensions:
+    - require: '@antora/lunr-extension'
+      index_latest_only: true

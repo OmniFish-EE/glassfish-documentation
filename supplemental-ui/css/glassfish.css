@@ -1,0 +1,421 @@
+/*
+ * GlassFish Documentation Site Theme
+ * Matches the color palette and style of glassfish.org
+ *
+ * Primary color: #3f7b96 (teal-blue, used for nav sidebar, links, headings)
+ * Secondary:     #5297b6 (lighter teal for borders/hover)
+ * Background:    #f4f4f4 (light grey for nav bar)
+ * Text:          #222
+ */
+
+/* ── Variables ─────────────────────────────────────────────── */
+:root {
+  --gf-primary:       #3f7b96;
+  --gf-primary-dark:  #2d5f75;
+  --gf-primary-light: #5297b6;
+  --gf-primary-pale:  #e8f3f8;
+  --gf-nav-bg:        #f4f4f4;
+  --gf-text:          #222;
+  --gf-border:        #d0d0d0;
+  --gf-code-bg:       #f5f7fa;
+  --gf-font:          'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── Google Fonts ───────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+/* ── Base ───────────────────────────────────────────────────── */
+html {
+  font-family: var(--gf-font);
+  font-size: 16px;
+}
+
+body {
+  color: var(--gf-text);
+}
+
+/* ── Header / Navbar ────────────────────────────────────────── */
+.gf-header {
+  background-color: #fff;
+  border-bottom: 3px solid var(--gf-primary);
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+.gf-navbar {
+  background-color: #fff !important;
+  min-height: 3.5rem;
+}
+
+.gf-logo {
+  height: 2rem;
+  width: auto;
+}
+
+.gf-logo-link {
+  padding: 0.5rem 0.75rem;
+}
+
+.gf-site-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--gf-primary) !important;
+  border-left: 1px solid var(--gf-border);
+  padding-left: 1rem;
+}
+
+.gf-navbar .navbar-item,
+.gf-navbar .navbar-link {
+  color: var(--gf-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.gf-navbar .navbar-end .navbar-item:hover {
+  color: var(--gf-primary);
+  background: var(--gf-primary-pale);
+}
+
+/* Search input in header */
+#search-input {
+  border: 1px solid var(--gf-border);
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#search-input:focus {
+  border-color: var(--gf-primary);
+  box-shadow: 0 0 0 2px rgba(63,123,150,.15);
+}
+
+/* ── Left Navigation ────────────────────────────────────────── */
+.nav-container {
+  background-color: var(--gf-nav-bg);
+  border-right: 1px solid var(--gf-border);
+}
+
+.nav-panel-menu {
+  background-color: var(--gf-nav-bg);
+}
+
+/* Nav tree root items (guide titles) */
+.nav-item > .nav-item-toggle ~ .nav-text,
+.nav-item > .nav-text {
+  font-size: 0.875rem;
+}
+
+/* Active/current page highlight */
+.nav-item.is-current-page > .nav-link,
+.nav-item.is-current-page > .nav-text {
+  color: var(--gf-primary);
+  font-weight: 600;
+}
+
+/* Nav links */
+.nav-link,
+.nav-link:visited {
+  color: #444;
+}
+
+.nav-link:hover {
+  color: var(--gf-primary);
+}
+
+/* Nav panel title (component name) */
+.context .version {
+  background-color: var(--gf-primary);
+  color: #fff;
+}
+
+/* ── Content Area ───────────────────────────────────────────── */
+.doc {
+  font-family: var(--gf-font);
+  line-height: 1.7;
+  color: var(--gf-text);
+}
+
+/* Headings */
+.doc h1,
+.doc h2,
+.doc h3,
+.doc h4 {
+  font-family: var(--gf-font);
+  font-weight: 700;
+  color: var(--gf-primary-dark);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.doc h1 {
+  font-size: 1.9rem;
+  border-bottom: 2px solid var(--gf-primary);
+  padding-bottom: 0.4rem;
+}
+
+.doc h2 {
+  font-size: 1.45rem;
+  border-bottom: 1px solid var(--gf-border);
+  padding-bottom: 0.25rem;
+}
+
+.doc h3 {
+  font-size: 1.15rem;
+}
+
+/* Links */
+.doc a,
+.doc a:visited {
+  color: var(--gf-primary);
+}
+
+.doc a:hover {
+  color: var(--gf-primary-dark);
+  text-decoration: underline;
+}
+
+/* Code */
+.doc code,
+.doc kbd {
+  background-color: var(--gf-code-bg);
+  border: 1px solid #e0e4ea;
+  border-radius: 3px;
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  color: #c7254e;
+}
+
+.doc pre {
+  background-color: var(--gf-code-bg);
+  border: 1px solid #dde3ea;
+  border-left: 4px solid var(--gf-primary);
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.doc pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* Tables */
+.doc table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.doc table th {
+  background-color: var(--gf-primary);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.doc table td {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--gf-border);
+}
+
+.doc table tr:nth-child(even) td {
+  background-color: #f8fbfd;
+}
+
+/* Admonition blocks */
+.doc .admonitionblock {
+  border-radius: 4px;
+  margin: 1.25rem 0;
+  padding: 0.75rem 1rem;
+}
+
+.doc .admonitionblock.note {
+  background-color: #e8f3f8;
+  border-left: 4px solid var(--gf-primary);
+}
+
+.doc .admonitionblock.tip {
+  background-color: #eafaf1;
+  border-left: 4px solid #27ae60;
+}
+
+.doc .admonitionblock.warning {
+  background-color: #fef9e7;
+  border-left: 4px solid #f39c12;
+}
+
+.doc .admonitionblock.caution {
+  background-color: #fdf2f2;
+  border-left: 4px solid #e74c3c;
+}
+
+.doc .admonitionblock.important {
+  background-color: #fdf2f2;
+  border-left: 4px solid #c0392b;
+}
+
+.doc .admonitionblock td.icon {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  padding-right: 0.75rem;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.doc .admonitionblock.note td.icon { color: var(--gf-primary); }
+.doc .admonitionblock.tip td.icon { color: #27ae60; }
+.doc .admonitionblock.warning td.icon { color: #f39c12; }
+.doc .admonitionblock.caution td.icon,
+.doc .admonitionblock.important td.icon { color: #e74c3c; }
+
+/* ── Toolbar (breadcrumbs + version) ────────────────────────── */
+.toolbar {
+  background-color: #fff;
+  border-bottom: 1px solid var(--gf-border);
+  font-size: 0.85rem;
+}
+
+.breadcrumbs a,
+.breadcrumbs a:visited {
+  color: var(--gf-primary);
+}
+
+/* ── TOC (right sidebar) ────────────────────────────────────── */
+.toc-menu {
+  font-size: 0.85rem;
+}
+
+.toc-menu a,
+.toc-menu a:visited {
+  color: #555;
+}
+
+.toc-menu a:hover {
+  color: var(--gf-primary);
+}
+
+.toc-menu a.is-active {
+  color: var(--gf-primary);
+  font-weight: 600;
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.gf-footer {
+  background-color: var(--gf-primary-dark);
+  color: #cde3ed;
+  padding: 2.5rem 1.5rem 1.5rem;
+  font-size: 0.875rem;
+}
+
+.gf-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+}
+
+.gf-footer-col {
+  flex: 1 1 180px;
+}
+
+.gf-footer-col strong {
+  display: block;
+  color: #fff;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.gf-footer-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gf-footer-col li {
+  margin-bottom: 0.35rem;
+}
+
+.gf-footer-col a,
+.gf-footer-col a:visited {
+  color: #a8cfe0;
+  text-decoration: none;
+}
+
+.gf-footer-col a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.gf-footer-bottom {
+  border-top: 1px solid rgba(255,255,255,.15);
+  padding-top: 1rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #8bbdd0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.gf-footer-bottom a {
+  color: #a8cfe0;
+}
+
+.gf-footer-bottom a:hover {
+  color: #fff;
+}
+
+/* ── Version badge in nav ───────────────────────────────────── */
+.version-menu .version-menu-toggle {
+  background-color: var(--gf-primary);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+}
+
+/* ── Pagination ─────────────────────────────────────────────── */
+.pagination {
+  border-top: 1px solid var(--gf-border);
+  margin-top: 2rem;
+  padding-top: 1rem;
+}
+
+.pagination a,
+.pagination a:visited {
+  color: var(--gf-primary);
+}
+
+/* ── Search results overlay ─────────────────────────────────── */
+#search-result-container {
+  border: 1px solid var(--gf-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+
+.search-result-highlight {
+  background-color: #fff3cd;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media screen and (max-width: 768px) {
+  .gf-footer-inner {
+    flex-direction: column;
+  }
+}
