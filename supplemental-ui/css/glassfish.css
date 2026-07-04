@@ -378,14 +378,69 @@ body {
   color: #fff;
 }
 
-/* ── Version badge in nav ───────────────────────────────────── */
-.version-menu .version-menu-toggle {
+/* ── Version selector in nav ────────────────────────────────── */
+.context .version {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   background-color: var(--gf-primary);
   color: #fff;
-  border: none;
-  border-radius: 3px;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
   font-size: 0.8rem;
-  padding: 0.2rem 0.6rem;
+  font-weight: 500;
+  min-width: 9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.version-menu {
+  margin: 0.5rem 0.75rem 0.75rem;
+}
+
+.version-menu .version-menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background-color: var(--gf-primary);
+  color: #fff;
+  border: 1px solid var(--gf-primary-dark);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 0.6rem 0.35rem 0.75rem;
+  min-width: 9rem;
+  width: 100%;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.version-menu .version-menu-toggle::after {
+  content: "\25BE";
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.version-menu .version-items {
+  min-width: 9rem;
+  width: 100%;
+}
+
+.version-menu .version-items a {
+  display: block;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--gf-text);
+  white-space: nowrap;
+}
+
+.version-menu .version-items a:hover {
+  background-color: var(--gf-primary-pale);
+  color: var(--gf-primary);
 }
 
 /* ── Pagination ─────────────────────────────────────────────── */

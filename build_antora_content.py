@@ -117,8 +117,8 @@ def get_page_order(guide_dir: Path) -> list[str]:
     return ordered
 
 
-def generate_nav_entries(guide_dir: Path, ordered_files: list[str], module_name: str) -> list[str]:
-    """Generate nav.adoc list entries for a guide."""
+def generate_nav_entries(guide_dir: Path, ordered_files: list[str], module_name: str, header_page: str) -> list[str]:
+    """Generate nav.adoc list entries for a guide, with sub-pages nested under the guide title."""
     entries = []
     for fname in ordered_files:
         if fname in SKIP_FILES:
@@ -131,10 +131,11 @@ def generate_nav_entries(guide_dir: Path, ordered_files: list[str], module_name:
             meta, _ = parse_jbake_header(content)
             title = meta.get("title", fname.replace(".adoc", "").replace("-", " ").title())
             title = re.sub(r"\{[^}]+\}", "GlassFish", title)
-            entries.append(f"* xref:{module_name}:{fname}[{title}]")
         except Exception:
-            page_name = fname.replace(".adoc", "")
-            entries.append(f"* xref:{module_name}:{fname}[{page_name}]")
+            title = fname.replace(".adoc", "")
+        # Guide title page is level 1 (*), all other pages are nested (**)
+        level = "*" if fname == header_page else "**"
+        entries.append(f"{level} xref:{module_name}:{fname}[{title}]")
     return entries
 
 
@@ -186,11 +187,13 @@ def setup_guide_module(src_docs_dir: Path, out_root: Path, guide_name: str, disp
     # Determine the nav header page (title.adoc or first real page)
     header_page = "title.adoc" if (pages_dir / "title.adoc").exists() else ordered[0] if ordered else "title.adoc"
 
-    nav_entries = generate_nav_entries(src_dir, ordered, module_name)
+    nav_entries = generate_nav_entries(src_dir, ordered, module_name, header_page)
+    # The first entry is the guide title at level 1 with the display name
     nav_content = f"* xref:{module_name}:{header_page}[{display_name}]\n"
     for entry in nav_entries:
-        if header_page in entry:
-            continue  # skip the header page itself from sub-entries
+        # Skip the header page entry (already written as the guide title above)
+        if entry.startswith("* ") and f":{header_page}[" in entry:
+            continue
         nav_content += entry + "\n"
 
     (module_dir / "nav.adoc").write_text(nav_content, encoding="utf-8")
@@ -255,11 +258,12 @@ def build_version(antora_version: str, git_ref: str, major_version: str,
 
     status = "SNAPSHOT" if is_prerelease else "Final"
 
+    prerelease_line = "prerelease: true\n" if is_prerelease else ""
     antora_yml_header = f"""name: glassfish
 title: Eclipse GlassFish Documentation
 version: '{antora_version}'
 display_version: '{display_label}'
-asciidoc:
+{prerelease_line}asciidoc:
   attributes:
     productName: Eclipse GlassFish
     product-majorVersion: '{major_version}'

@@ -3,6 +3,12 @@ site:
   url: https://omnifish-ee.github.io/glassfish-documentation
   start_page: glassfish::ROOT:index.adoc
 
+urls:
+  # The latest stable version uses the segment "latest" in its URL
+  # e.g. /glassfish/latest/index.html always points to the current stable release
+  latest_version_segment: latest
+  latest_version_segment_strategy: redirect:to
+
 content:
   sources:
     - url: ./antora-content
