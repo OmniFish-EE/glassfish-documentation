@@ -6,36 +6,50 @@ Each Maven module (guide) becomes an Antora module under a single component.
 The JBake-style header (key=value lines before ~~~~~~) is stripped.
 A nav.adoc is generated for each guide from the next= chain.
 An antora.yml is created at the component root.
+
+Usage:
+  python3 build_antora_content.py                    # builds all versions
+  python3 build_antora_content.py 8.0-SNAPSHOT       # builds one version
 """
 
-import os
 import re
 import shutil
+import sys
 from pathlib import Path
 
 # Resolve paths relative to this script's location (repo root)
 REPO_ROOT = Path(__file__).parent
-REPO_DOCS = REPO_ROOT / "glassfish-repo" / "docs"
-OUT_ROOT = REPO_ROOT / "antora-content"
+
+# ── Version definitions ────────────────────────────────────────────────────────
+# Each entry: (antora_version, git_ref, major_version, jakartaee_version, display_label, is_prerelease)
+VERSIONS = [
+    ("8.0-SNAPSHOT", "main",   "8", "10", "8.0 SNAPSHOT", True),
+    ("8.0.3",        "8.0.3",  "8", "10", "8.0.3",        False),
+    ("7.1.1",        "7.1.1",  "7", "10", "7.1.1",        False),
+    ("7.0.26",       "7.0.26", "7", "10", "7.0.26",       False),
+]
+
+# The version shown by default in the version switcher (latest stable)
+LATEST_VERSION = "8.0.3"
 
 # Guides to include, with display names and nav order
 GUIDES = [
-    ("quick-start-guide",                "Quick Start Guide"),
-    ("installation-guide",               "Installation Guide"),
-    ("administration-guide",             "Administration Guide"),
-    ("application-development-guide",    "Application Development Guide"),
-    ("application-deployment-guide",     "Application Deployment Guide"),
-    ("deployment-planning-guide",        "Deployment Planning Guide"),
-    ("security-guide",                   "Security Guide"),
-    ("performance-tuning-guide",         "Performance Tuning Guide"),
-    ("ha-administration-guide",          "High Availability Administration Guide"),
-    ("troubleshooting-guide",            "Troubleshooting Guide"),
-    ("reference-manual",                 "Reference Manual"),
-    ("error-messages-reference",         "Error Messages Reference"),
-    ("upgrade-guide",                    "Upgrade Guide"),
-    ("embedded-server-guide",            "Embedded Server Guide"),
-    ("add-on-component-development-guide", "Add-On Component Development Guide"),
-    ("release-notes",                    "Release Notes"),
+    ("quick-start-guide",                   "Quick Start Guide"),
+    ("installation-guide",                  "Installation Guide"),
+    ("administration-guide",                "Administration Guide"),
+    ("application-development-guide",       "Application Development Guide"),
+    ("application-deployment-guide",        "Application Deployment Guide"),
+    ("deployment-planning-guide",           "Deployment Planning Guide"),
+    ("security-guide",                      "Security Guide"),
+    ("performance-tuning-guide",            "Performance Tuning Guide"),
+    ("ha-administration-guide",             "High Availability Administration Guide"),
+    ("troubleshooting-guide",               "Troubleshooting Guide"),
+    ("reference-manual",                    "Reference Manual"),
+    ("error-messages-reference",            "Error Messages Reference"),
+    ("upgrade-guide",                       "Upgrade Guide"),
+    ("embedded-server-guide",               "Embedded Server Guide"),
+    ("add-on-component-development-guide",  "Add-On Component Development Guide"),
+    ("release-notes",                       "Release Notes"),
 ]
 
 # Files to skip (index/list pages not useful as standalone pages)
@@ -43,6 +57,8 @@ SKIP_FILES = {"book.adoc", "loe.adoc", "lof.adoc", "lot.adoc"}
 
 ATTR_SEPARATOR = "~~~~~~"
 
+
+# ── Parsing helpers ────────────────────────────────────────────────────────────
 
 def parse_jbake_header(content: str) -> tuple[dict, str]:
     """Parse the JBake-style header and return (metadata_dict, body)."""
@@ -62,11 +78,11 @@ def parse_jbake_header(content: str) -> tuple[dict, str]:
 
 def get_page_order(guide_dir: Path) -> list[str]:
     """
-    Walk the next= chain starting from title.adoc to get ordered page list.
-    Falls back to alphabetical if chain is broken.
+    Walk the next= chain starting from title.adoc (or release-notes.adoc as
+    fallback) to get the ordered page list.
     """
     adoc_files = {f.name: f for f in guide_dir.glob("*.adoc")}
-    
+
     # Build next map
     next_map = {}
     for fname, fpath in adoc_files.items():
@@ -74,17 +90,20 @@ def get_page_order(guide_dir: Path) -> list[str]:
             content = fpath.read_text(encoding="utf-8", errors="replace")
             meta, _ = parse_jbake_header(content)
             nxt = meta.get("next", "")
-            # Normalize: strip .html -> .adoc
             if nxt:
                 nxt = re.sub(r"\.html$", ".adoc", nxt)
                 next_map[fname] = nxt
         except Exception:
             pass
 
-    # Walk chain from title.adoc
+    # Determine start file: prefer title.adoc, fall back to release-notes.adoc
+    start = "title.adoc" if "title.adoc" in adoc_files else next(
+        (f for f in adoc_files if f not in SKIP_FILES), None
+    )
+
     ordered = []
     seen = set()
-    current = "title.adoc"
+    current = start
     while current and current in adoc_files and current not in seen:
         seen.add(current)
         ordered.append(current)
@@ -111,9 +130,7 @@ def generate_nav_entries(guide_dir: Path, ordered_files: list[str], module_name:
             content = fpath.read_text(encoding="utf-8", errors="replace")
             meta, _ = parse_jbake_header(content)
             title = meta.get("title", fname.replace(".adoc", "").replace("-", " ").title())
-            # Replace attribute references with plain text
             title = re.sub(r"\{[^}]+\}", "GlassFish", title)
-            page_name = fname.replace(".adoc", "")
             entries.append(f"* xref:{module_name}:{fname}[{title}]")
         except Exception:
             page_name = fname.replace(".adoc", "")
@@ -121,113 +138,73 @@ def generate_nav_entries(guide_dir: Path, ordered_files: list[str], module_name:
     return entries
 
 
-def process_adoc_body(body: str, guide_name: str) -> str:
-    """
-    Post-process the adoc body:
-    - Replace {productName} and similar attributes
-    - Fix xref links that use .html extension
-    - Keep everything else as-is (Asciidoctor handles the rest)
-    """
-    # Fix xref links: xref:filename.html[...] -> xref:filename.adoc[...]
-    body = re.sub(r"xref:([^[#\s]+)\.html(#[^[\s]*)?\[", 
-                  lambda m: f"xref:{m.group(1)}.adoc{m.group(2) or ''}[", body)
-    
-    # Fix link: references that point to other guides
-    # These will remain as external links for now
-    
+def process_adoc_body(body: str) -> str:
+    """Fix xref links that use .html extension."""
+    body = re.sub(
+        r"xref:([^[#\s]+)\.html(#[^[\s]*)?\[",
+        lambda m: f"xref:{m.group(1)}.adoc{m.group(2) or ''}[",
+        body,
+    )
     return body
 
 
-def setup_guide_module(guide_name: str, display_name: str):
-    """Set up one Antora module for a guide."""
-    src_dir = REPO_DOCS / guide_name / "src" / "main" / "asciidoc"
+# ── Per-guide module builder ───────────────────────────────────────────────────
+
+def setup_guide_module(src_docs_dir: Path, out_root: Path, guide_name: str, display_name: str) -> str | None:
+    """Set up one Antora module for a guide. Returns module_name or None."""
+    src_dir = src_docs_dir / guide_name / "src" / "main" / "asciidoc"
     if not src_dir.exists():
         print(f"  SKIP {guide_name}: no src dir")
         return None
 
     module_name = guide_name
-    module_dir = OUT_ROOT / "modules" / module_name
+    module_dir = out_root / "modules" / module_name
     pages_dir = module_dir / "pages"
     images_dir = module_dir / "images"
-    
     pages_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy images if present
+    # Copy images
     img_src = src_dir / "img"
     if img_src.exists():
         if images_dir.exists():
             shutil.rmtree(images_dir)
         shutil.copytree(img_src, images_dir)
 
-    adoc_files = list(src_dir.glob("*.adoc"))
     ordered = get_page_order(src_dir)
 
-    # Process each adoc file
     for fname in ordered:
         if fname in SKIP_FILES:
             continue
         fpath = src_dir / fname
         if not fpath.exists():
             continue
-        
         content = fpath.read_text(encoding="utf-8", errors="replace")
-        meta, body = parse_jbake_header(content)
-        body = process_adoc_body(body, guide_name)
-        
-        # Write processed file
-        out_path = pages_dir / fname
-        out_path.write_text(body, encoding="utf-8")
+        _, body = parse_jbake_header(content)
+        body = process_adoc_body(body)
+        (pages_dir / fname).write_text(body, encoding="utf-8")
 
-    # Generate nav.adoc
+    # Determine the nav header page (title.adoc or first real page)
+    header_page = "title.adoc" if (pages_dir / "title.adoc").exists() else ordered[0] if ordered else "title.adoc"
+
     nav_entries = generate_nav_entries(src_dir, ordered, module_name)
-    nav_content = f"* xref:{module_name}:title.adoc[{display_name}]\n"
-    for entry in nav_entries[1:]:  # skip title.adoc itself, already the header
+    nav_content = f"* xref:{module_name}:{header_page}[{display_name}]\n"
+    for entry in nav_entries:
+        if header_page in entry:
+            continue  # skip the header page itself from sub-entries
         nav_content += entry + "\n"
-    
-    nav_path = module_dir / "nav.adoc"
-    nav_path.write_text(nav_content, encoding="utf-8")
 
-    print(f"  OK  {guide_name}: {len([f for f in ordered if f not in SKIP_FILES and (src_dir/f).exists()])} pages")
+    (module_dir / "nav.adoc").write_text(nav_content, encoding="utf-8")
+
+    page_count = len([f for f in ordered if f not in SKIP_FILES and (src_dir / f).exists()])
+    print(f"  OK  {guide_name}: {page_count} pages")
     return module_name
 
 
-def main():
-    # Clean output
-    if OUT_ROOT.exists():
-        shutil.rmtree(OUT_ROOT)
-    OUT_ROOT.mkdir(parents=True)
+# ── Index page builder ─────────────────────────────────────────────────────────
 
-    # Create antora.yml
-    antora_yml = """name: glassfish
-title: Eclipse GlassFish Documentation
-version: '8.0-SNAPSHOT'
-asciidoc:
-  attributes:
-    productName: Eclipse GlassFish
-    product-majorVersion: '8'
-    jakartaee: '10'
-    status: SNAPSHOT
-nav:
-"""
-
-    modules = []
-    for guide_name, display_name in GUIDES:
-        print(f"Processing {guide_name}...")
-        module_name = setup_guide_module(guide_name, display_name)
-        if module_name:
-            modules.append((module_name, display_name))
-
-    # Add nav entries to antora.yml
-    for module_name, _ in modules:
-        antora_yml += f"  - modules/{module_name}/nav.adoc\n"
-
-    (OUT_ROOT / "antora.yml").write_text(antora_yml, encoding="utf-8")
-
-    # Create a ROOT module with the landing index page
-    root_pages = OUT_ROOT / "modules" / "ROOT" / "pages"
-    root_pages.mkdir(parents=True, exist_ok=True)
-    
-    index_content = """= Eclipse GlassFish Documentation
+def build_index_page(modules: list[tuple[str, str]], release_notes_entry: str) -> str:
+    """Generate the landing index.adoc content."""
+    return f"""= Eclipse GlassFish Documentation
 :description: Eclipse GlassFish is a full Jakarta EE application server.
 
 Welcome to the Eclipse GlassFish documentation.
@@ -259,23 +236,200 @@ Select a guide from the navigation panel on the left, or use the search box to f
 
 * xref:reference-manual:title.adoc[Reference Manual] — Complete reference for all asadmin subcommands.
 * xref:error-messages-reference:title.adoc[Error Messages Reference] — Descriptions and solutions for error messages.
-* xref:release-notes:title.adoc[Release Notes] — What's new and changed in this release.
+* {release_notes_entry}
 """
+
+
+# ── Per-version builder ────────────────────────────────────────────────────────
+
+def build_version(antora_version: str, git_ref: str, major_version: str,
+                  jakartaee: str, display_label: str, is_prerelease: bool,
+                  src_docs_dir: Path):
+    """Build the Antora content source for one version."""
+    out_root = REPO_ROOT / "antora-content" / antora_version
+    if out_root.exists():
+        shutil.rmtree(out_root)
+    out_root.mkdir(parents=True)
+
+    print(f"\n=== Building version {antora_version} (ref: {git_ref}) ===")
+
+    status = "SNAPSHOT" if is_prerelease else "Final"
+
+    antora_yml_header = f"""name: glassfish
+title: Eclipse GlassFish Documentation
+version: '{antora_version}'
+display_version: '{display_label}'
+asciidoc:
+  attributes:
+    productName: Eclipse GlassFish
+    product-majorVersion: '{major_version}'
+    jakartaee: '{jakartaee}'
+    status: {status}
+nav:
+  - modules/ROOT/nav.adoc
+"""
+
+    modules = []
+    for guide_name, display_name in GUIDES:
+        module_name = setup_guide_module(src_docs_dir, out_root, guide_name, display_name)
+        if module_name:
+            modules.append((module_name, display_name))
+
+    # Add nav entries
+    nav_lines = "".join(f"  - modules/{m}/nav.adoc\n" for m, _ in modules)
+    antora_yml = antora_yml_header + nav_lines
+
+    (out_root / "antora.yml").write_text(antora_yml, encoding="utf-8")
+
+    # ROOT module
+    root_pages = out_root / "modules" / "ROOT" / "pages"
+    root_pages.mkdir(parents=True, exist_ok=True)
+
+    # Determine release-notes entry (7.x uses release-notes.adoc, 8.x uses title.adoc)
+    rn_src = src_docs_dir / "release-notes" / "src" / "main" / "asciidoc"
+    if (rn_src / "title.adoc").exists():
+        rn_entry = "xref:release-notes:title.adoc[Release Notes] — What's new and changed in this release."
+    else:
+        rn_entry = "xref:release-notes:release-notes.adoc[Release Notes] — What's new and changed in this release."
+
+    index_content = build_index_page(modules, rn_entry)
     (root_pages / "index.adoc").write_text(index_content, encoding="utf-8")
-
-    # ROOT nav
-    root_nav = OUT_ROOT / "modules" / "ROOT" / "nav.adoc"
-    root_nav.write_text("* xref:ROOT:index.adoc[Home]\n", encoding="utf-8")
-
-    # Prepend ROOT nav to antora.yml nav list
-    antora_yml_final = antora_yml.replace(
-        "nav:\n",
-        "nav:\n  - modules/ROOT/nav.adoc\n"
+    (out_root / "modules" / "ROOT" / "nav.adoc").write_text(
+        "* xref:ROOT:index.adoc[Home]\n", encoding="utf-8"
     )
-    (OUT_ROOT / "antora.yml").write_text(antora_yml_final, encoding="utf-8")
 
-    print(f"\nDone. Content written to {OUT_ROOT}")
-    print(f"Modules: {[m for m, _ in modules]}")
+    print(f"  Done: {len(modules)} guides written to {out_root}")
+    return out_root
+
+
+# ── Checkout helper ────────────────────────────────────────────────────────────
+
+def get_docs_dir(git_ref: str) -> Path:
+    """
+    Return the path to the docs directory for a given git ref.
+    For 'main' we use the already-checked-out sparse clone.
+    For tags we do a separate sparse checkout into a temp directory.
+    """
+    import subprocess
+
+    repo_dir = REPO_ROOT / "glassfish-repo"
+
+    if git_ref == "main":
+        return repo_dir / "docs"
+
+    # For tags: checkout into a worktree or temp clone
+    tag_dir = REPO_ROOT / "glassfish-repo-tags" / git_ref
+    if tag_dir.exists():
+        return tag_dir / "docs"
+
+    tag_dir.mkdir(parents=True, exist_ok=True)
+    print(f"  Fetching tag {git_ref} from upstream...")
+    subprocess.run(
+        ["git", "clone", "--depth", "1", "--filter=blob:none", "--sparse",
+         "--branch", git_ref,
+         "https://github.com/eclipse-ee4j/glassfish.git", str(tag_dir)],
+        check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "sparse-checkout", "set", "docs"],
+        cwd=tag_dir, check=True, capture_output=True
+    )
+    return tag_dir / "docs"
+
+
+# ── Fix xrefs ─────────────────────────────────────────────────────────────────
+
+def fix_xrefs_in_version(out_root: Path):
+    """Fix cross-guide xref links in all modules of a version."""
+    modules_dir = out_root / "modules"
+    if not modules_dir.exists():
+        return
+
+    module_names = {d.name for d in modules_dir.iterdir() if d.is_dir() and d.name != "ROOT"}
+    module_pages = {
+        m: {f.name for f in (modules_dir / m / "pages").glob("*.adoc")}
+        for m in module_names
+        if (modules_dir / m / "pages").exists()
+    }
+
+    pattern = re.compile(r"xref:((?:\.\.\/)?[^[#:\s]+?)((?:#[^[\s]*)?(?:\[[^\]]*\])+)")
+
+    def replace_xref(m, current_module):
+        full_match = m.group(0)
+        target = m.group(1)
+        rest = m.group(2)
+
+        if ":" in target and not target.startswith(".."):
+            return full_match
+        if target.startswith("../"):
+            target = target[3:]
+
+        if "#" in target:
+            filename, anchor = target.split("#", 1)
+            anchor = "#" + anchor
+        else:
+            filename = target
+            anchor = ""
+
+        filename = re.sub(r"\.html$", ".adoc", filename)
+        stem = filename.replace(".adoc", "")
+
+        if stem in module_names:
+            if stem == current_module:
+                return f"xref:title.adoc{anchor}{rest}"
+            # Determine correct entry page for this module
+            entry = "title.adoc" if "title.adoc" in module_pages.get(stem, set()) else "release-notes.adoc"
+            return f"xref:{stem}:{entry}{anchor}{rest}"
+
+        for mod_name, pages in module_pages.items():
+            if mod_name != current_module and filename in pages:
+                return f"xref:{mod_name}:{filename}{anchor}{rest}"
+
+        if filename != target.split("#")[0]:
+            return f"xref:{filename}{anchor}{rest}"
+        return full_match
+
+    total_fixed = 0
+    for module_name in sorted(module_names):
+        pages_dir = modules_dir / module_name / "pages"
+        if not pages_dir.exists():
+            continue
+        fixed = 0
+        for adoc_file in pages_dir.glob("*.adoc"):
+            content = adoc_file.read_text(encoding="utf-8", errors="replace")
+            original = content
+            content = pattern.sub(lambda m: replace_xref(m, module_name), content)
+            if content != original:
+                adoc_file.write_text(content, encoding="utf-8")
+                fixed += 1
+        total_fixed += fixed
+    print(f"  xrefs fixed in {total_fixed} files")
+
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+
+def main():
+    # Allow building a single version: python3 build_antora_content.py 8.0.3
+    filter_version = sys.argv[1] if len(sys.argv) > 1 else None
+
+    versions_to_build = [
+        v for v in VERSIONS
+        if filter_version is None or v[0] == filter_version
+    ]
+    if not versions_to_build:
+        print(f"Unknown version: {filter_version}")
+        print(f"Available: {[v[0] for v in VERSIONS]}")
+        sys.exit(1)
+
+    for antora_version, git_ref, major_version, jakartaee, display_label, is_prerelease in versions_to_build:
+        src_docs_dir = get_docs_dir(git_ref)
+        out_root = build_version(
+            antora_version, git_ref, major_version, jakartaee,
+            display_label, is_prerelease, src_docs_dir
+        )
+        fix_xrefs_in_version(out_root)
+
+    print("\nAll versions built successfully.")
 
 
 if __name__ == "__main__":

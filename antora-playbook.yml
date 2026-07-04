@@ -6,7 +6,16 @@ site:
 content:
   sources:
     - url: ./antora-content
-      start_path: .
+      start_path: 8.0-SNAPSHOT
+      branches: HEAD
+    - url: ./antora-content
+      start_path: 8.0.3
+      branches: HEAD
+    - url: ./antora-content
+      start_path: 7.1.1
+      branches: HEAD
+    - url: ./antora-content
+      start_path: 7.0.26
       branches: HEAD
 
 ui:
@@ -17,10 +26,6 @@ ui:
 
 asciidoc:
   attributes:
-    productName: Eclipse GlassFish
-    product-majorVersion: '8'
-    jakartaee: '10'
-    status: SNAPSHOT
     source-highlighter: highlight.js
     icons: font
     sectanchors: ''

@@ -40,18 +40,15 @@ jobs:
                          @antora/site-generator@3.1 \
                          @antora/lunr-extension
 
-      - name: Checkout GlassFish source docs (sparse)
+      - name: Checkout GlassFish main branch docs (sparse)
         run: |
           git clone --depth 1 --filter=blob:none --sparse \
             https://github.com/eclipse-ee4j/glassfish.git glassfish-repo
           cd glassfish-repo
           git sparse-checkout set docs
 
-      - name: Transform sources to Antora layout
+      - name: Transform sources to Antora layout (all versions)
         run: python3 build_antora_content.py
-
-      - name: Fix cross-guide xref links
-        run: python3 fix_xrefs.py
 
       - name: Initialise Antora content git repo
         run: |
