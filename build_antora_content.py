@@ -7,6 +7,8 @@ The JBake-style header (key=value lines before ~~~~~~) is stripped.
 A nav.adoc is generated for each guide from the next= chain.
 An antora.yml is created at the component root.
 
+Configuration is loaded from docs-config.yml in the same directory.
+
 Usage:
   python3 build_antora_content.py                    # builds all versions
   python3 build_antora_content.py 8.0-SNAPSHOT       # builds one version
@@ -14,42 +16,44 @@ Usage:
 
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml", "-q"], check=True)
+    import yaml
 
 # Resolve paths relative to this script's location (repo root)
 REPO_ROOT = Path(__file__).parent
 
-# ── Version definitions ────────────────────────────────────────────────────────
-# Each entry: (antora_version, git_ref, major_version, jakartaee_version, display_label, is_prerelease)
+# ── Load configuration ─────────────────────────────────────────────────────────
+
+def load_config() -> dict:
+    config_path = REPO_ROOT / "docs-config.yml"
+    with config_path.open(encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+CONFIG = load_config()
+
 VERSIONS = [
-    ("8.0-SNAPSHOT", "main",   "8", "10", "8.0 SNAPSHOT", True),
-    ("8.0.3",        "8.0.3",  "8", "10", "8.0.3",        False),
-    ("7.1.1",        "7.1.1",  "7", "10", "7.1.1",        False),
-    ("7.0.26",       "7.0.26", "7", "10", "7.0.26",       False),
+    (
+        v["version"],
+        v["ref"],
+        str(v["major"]),
+        str(v["jakartaee"]),
+        v["display"],
+        bool(v.get("prerelease", False)),
+    )
+    for v in CONFIG["versions"]
 ]
 
-# The version shown by default in the version switcher (latest stable)
-LATEST_VERSION = "8.0.3"
+LATEST_VERSION: str = CONFIG["latest_version"]
 
-# Guides to include, with display names and nav order
-GUIDES = [
-    ("quick-start-guide",                   "Quick Start Guide"),
-    ("installation-guide",                  "Installation Guide"),
-    ("administration-guide",                "Administration Guide"),
-    ("application-development-guide",       "Application Development Guide"),
-    ("application-deployment-guide",        "Application Deployment Guide"),
-    ("deployment-planning-guide",           "Deployment Planning Guide"),
-    ("security-guide",                      "Security Guide"),
-    ("performance-tuning-guide",            "Performance Tuning Guide"),
-    ("ha-administration-guide",             "High Availability Administration Guide"),
-    ("troubleshooting-guide",               "Troubleshooting Guide"),
-    ("reference-manual",                    "Reference Manual"),
-    ("error-messages-reference",            "Error Messages Reference"),
-    ("upgrade-guide",                       "Upgrade Guide"),
-    ("embedded-server-guide",               "Embedded Server Guide"),
-    ("add-on-component-development-guide",  "Add-On Component Development Guide"),
-    ("release-notes",                       "Release Notes"),
+GUIDES: list[tuple[str, str]] = [
+    (g["dir"], g["title"]) for g in CONFIG["guides"]
 ]
 
 # Files to skip (index/list pages not useful as standalone pages)
@@ -314,8 +318,6 @@ def get_docs_dir(git_ref: str) -> Path:
     For 'main' we use the already-checked-out sparse clone.
     For tags we do a separate sparse checkout into a temp directory.
     """
-    import subprocess
-
     repo_dir = REPO_ROOT / "glassfish-repo"
 
     if git_ref == "main":

@@ -1,0 +1,102 @@
+# GlassFish Documentation Site Configuration
+#
+# VERSIONS
+#   Each entry defines one version of the documentation to build.
+#   Fields:
+#     version:      Antora version string, used in the URL path
+#     ref:          Git branch name or tag to check out from eclipse-ee4j/glassfish
+#     major:        GlassFish major version number (used in adoc attributes)
+#     jakartaee:    Jakarta EE version this GlassFish release implements
+#     display:      Human-readable label shown in the version switcher
+#     prerelease:   true = not eligible for the "latest" URL alias
+#
+# LATEST_VERSION
+#   The version whose URL uses "latest" as the path segment instead of the
+#   actual version string. Must match one of the version values above, and
+#   that entry must have prerelease: false.
+#
+# GUIDES
+#   Ordered list of documentation guides to include.
+#   Each entry:
+#     dir:     Directory name under docs/ in the GlassFish repository
+#     title:   Display name shown in the navigation sidebar
+
+versions:
+  - version: "8.0-SNAPSHOT"
+    ref: main
+    major: "8"
+    jakartaee: "10"
+    display: "8.0 SNAPSHOT"
+    prerelease: true
+
+  - version: "8.0.3"
+    ref: "8.0.3"
+    major: "8"
+    jakartaee: "10"
+    display: "8.0.3"
+    prerelease: false
+
+  - version: "7.1.1"
+    ref: "7.1.1"
+    major: "7"
+    jakartaee: "10"
+    display: "7.1.1"
+    prerelease: false
+
+  - version: "7.0.26"
+    ref: "7.0.26"
+    major: "7"
+    jakartaee: "10"
+    display: "7.0.26"
+    prerelease: false
+
+latest_version: "8.0.3"
+
+guides:
+  - dir: quick-start-guide
+    title: Quick Start Guide
+
+  - dir: installation-guide
+    title: Installation Guide
+
+  - dir: administration-guide
+    title: Administration Guide
+
+  - dir: application-development-guide
+    title: Application Development Guide
+
+  - dir: application-deployment-guide
+    title: Application Deployment Guide
+
+  - dir: deployment-planning-guide
+    title: Deployment Planning Guide
+
+  - dir: security-guide
+    title: Security Guide
+
+  - dir: performance-tuning-guide
+    title: Performance Tuning Guide
+
+  - dir: ha-administration-guide
+    title: High Availability Administration Guide
+
+  - dir: troubleshooting-guide
+    title: Troubleshooting Guide
+
+  - dir: reference-manual
+    title: Reference Manual
+
+  - dir: error-messages-reference
+    title: Error Messages Reference
+
+  - dir: upgrade-guide
+    title: Upgrade Guide
+
+  - dir: embedded-server-guide
+    title: Embedded Server Guide
+
+  - dir: add-on-component-development-guide
+    title: Add-On Component Development Guide
+
+  - dir: release-notes
+    title: Release Notes
