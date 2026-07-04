@@ -27,14 +27,14 @@ versions:
   - version: "8.0-SNAPSHOT"
     ref: main
     major: "8"
-    jakartaee: "10"
+    jakartaee: "11"
     display: "8.0 SNAPSHOT"
     prerelease: true
 
   - version: "8.0.3"
     ref: "8.0.3"
     major: "8"
-    jakartaee: "10"
+    jakartaee: "11"
     display: "8.0.3"
     prerelease: false
 
