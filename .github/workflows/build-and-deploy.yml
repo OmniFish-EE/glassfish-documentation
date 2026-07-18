@@ -4,11 +4,13 @@ on:
   # Run on every push to main
   push:
     branches: [main]
-  # Run nightly to pick up upstream GlassFish source changes
+  # Run daily to force a full rebuild and deploy
   schedule:
     - cron: '0 3 * * *'
   # Allow manual trigger from the Actions tab
   workflow_dispatch:
+  # Allow invocation from other workflows in this repository
+  workflow_call:
 
 # Grant the GITHUB_TOKEN permission to write to GitHub Pages
 permissions:

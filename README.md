@@ -18,7 +18,8 @@ The AsciiDoc sources live in the upstream [eclipse-ee4j/glassfish](https://githu
 The site rebuilds automatically:
 
 - On every push to `main` in this repository (e.g. theme or config changes)
-- Every night at 03:00 UTC, picking up any new commits from the upstream GlassFish repo
+- Every 5 minutes, only when a new upstream commit touches `docs/` in `eclipse-ee4j/glassfish`
+- Every day at 03:00 UTC (full rebuild)
 - On demand via the **Actions** tab → **Build and Deploy Documentation** → **Run workflow**
 
 ## Repository structure
@@ -36,7 +37,8 @@ The site rebuilds automatically:
 │   ├── partials/head-styles.hbs
 │   └── img/glassfish-logo.png
 └── .github/workflows/
-    └── build-and-deploy.yml     # GitHub Actions workflow
+  ├── build-and-deploy.yml     # GitHub Pages build + deploy workflow
+  └── upstream-docs-listener.yml # Polls upstream docs changes and triggers deploy
 ```
 
 The following directories are generated at build time and are not committed:
