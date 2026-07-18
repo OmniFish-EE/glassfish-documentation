@@ -66,6 +66,16 @@ Two convenience scripts in `local-build/` cover the most common workflows.
 bash local-build/build-site.sh
 ```
 
+Build scope options:
+
+```bash
+# Build all configured versions (default)
+bash local-build/build-site.sh --all
+
+# Build only the version mapped to ref: main in docs-config.yml
+bash local-build/build-site.sh --main
+```
+
 This script:
 1. Installs Antora tooling via npm (skipped if already installed)
 2. Clones or updates the upstream GlassFish docs (sparse checkout of `docs/`)
@@ -91,7 +101,15 @@ bash local-build/serve-site.sh 8080
 bash local-build/serve-site.sh --watch
 ```
 
-Runs a full build first, then watches for file changes and rebuilds automatically:
+By default, `--watch` builds and rebuilds only the main-branch version (the entry whose `ref` is `main` in `docs-config.yml`).
+
+To watch and rebuild all configured versions:
+
+```bash
+bash local-build/serve-site.sh --watch --all
+```
+
+Watch mode runs an initial build, then watches for file changes and rebuilds automatically:
 
 - Changes in `supplemental-ui/`, `antora-playbook.yml`, or `antora-content/` trigger a **fast rebuild** (Antora only).
 - Changes in `glassfish-repo/docs/`, `build_antora_content.py`, or `docs-config.yml` trigger a **full rebuild** (transform + Antora).

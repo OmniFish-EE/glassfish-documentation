@@ -8,5 +8,8 @@ build/
 glassfish-repo/
 glassfish-repo-tags/
 
+# Generated local main-scope Antora playbook
+.antora-playbook.main.yml
+
 # Node
 node_modules/

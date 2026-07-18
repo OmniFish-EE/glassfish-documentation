@@ -151,6 +151,13 @@ def process_adoc_body(body: str) -> str:
         lambda m: f"xref:{m.group(1)}.adoc{m.group(2) or ''}[",
         body,
     )
+
+    # Convert legacy JBake image paths to Antora module images.
+    # Examples:
+    #   image:img/foo.png[Alt]   -> image::foo.png[Alt]
+    #   image::img/foo.png[Alt]  -> image::foo.png[Alt]
+    body = re.sub(r"image::?img/([^\[]+)\[", r"image::\1[", body)
+
     return body
 
 
