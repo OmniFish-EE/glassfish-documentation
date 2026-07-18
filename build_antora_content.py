@@ -217,41 +217,40 @@ def setup_guide_module(src_docs_dir: Path, out_root: Path, guide_name: str, disp
 
 # ── Index page builder ─────────────────────────────────────────────────────────
 
-def build_index_page(modules: list[tuple[str, str]], release_notes_entry: str) -> str:
-    """Generate the landing index.adoc content."""
-    return f"""= Eclipse GlassFish Documentation
-:description: Eclipse GlassFish is a full Jakarta EE application server.
+INDEX_PAGE_TEMPLATE = REPO_ROOT / "templates" / "index-page.adoc"
 
-Welcome to the Eclipse GlassFish documentation.
-Select a guide from the navigation panel on the left, or use the search box to find what you need.
 
-== Developer Guides
+def build_index_page(release_notes_entry: str) -> str:
+    """Generate the landing index.adoc content from the standalone template."""
+    template = INDEX_PAGE_TEMPLATE.read_text(encoding="utf-8")
+    return template.replace("{{release_notes_entry}}", release_notes_entry)
 
-* xref:quick-start-guide:title.adoc[Quick Start Guide] — Get GlassFish running and deploy your first application.
-* xref:application-development-guide:title.adoc[Application Development Guide] — Develop Jakarta EE applications for GlassFish.
-* xref:application-deployment-guide:title.adoc[Application Deployment Guide] — Deploy and manage applications.
-* xref:embedded-server-guide:title.adoc[Embedded Server Guide] — Embed GlassFish in your application or tests.
-* xref:add-on-component-development-guide:title.adoc[Add-On Component Development Guide] — Extend GlassFish with custom components.
 
-== Administration Guides
+def build_developer_tools_page() -> str:
+    """Generate the external developer tools landing page."""
+    return """= GlassFish Developer Tools
+:description: External documentation for GlassFish developer tools and integrations.
 
-* xref:administration-guide:title.adoc[Administration Guide] — Configure and administer GlassFish.
-* xref:installation-guide:title.adoc[Installation Guide] — Install GlassFish on your platform.
-* xref:security-guide:title.adoc[Security Guide] — Secure your GlassFish installation and applications.
-* xref:ha-administration-guide:title.adoc[High Availability Administration Guide] — Set up clustering and high availability.
-* xref:upgrade-guide:title.adoc[Upgrade Guide] — Upgrade from an earlier version.
-* xref:troubleshooting-guide:title.adoc[Troubleshooting Guide] — Diagnose and fix common issues.
+This page collects external documentation for tools and integrations that help you develop with GlassFish.
 
-== Architecture and Planning
+== Docker
 
-* xref:deployment-planning-guide:title.adoc[Deployment Planning Guide] — Plan your GlassFish deployment topology.
-* xref:performance-tuning-guide:title.adoc[Performance Tuning Guide] — Tune GlassFish for production workloads.
+* https://github.com/eclipse-ee4j/glassfish.docker/wiki[GlassFish Docker wiki]
 
-== Reference
+== Embedded GlassFish Maven Plugin
 
-* xref:reference-manual:title.adoc[Reference Manual] — Complete reference for all asadmin subcommands.
-* xref:error-messages-reference:title.adoc[Error Messages Reference] — Descriptions and solutions for error messages.
-* {release_notes_entry}
+* https://github.com/eclipse-ee4j/glassfish-maven-embedded-plugin[GlassFish Maven Embedded Plugin]
+
+== IDE Plugins
+
+* https://omnifish.ee/developers/glassfish-server/ide-plugins-for-glassfish/intellij-idea/[GlassFish in IntelliJ Idea]
+* https://omnifish.ee/developers/glassfish-server/ide-plugins-for-glassfish/eclipse-glassfish-in-visual-studio-code/[GlassFish in Visual Studio Code]
+* https://omnifish.ee/developers/glassfish-server/ide-plugins-for-glassfish/eclipse-ide/[GlassFish in Eclipse IDE]
+* https://omnifish.ee/developers/glassfish-server/ide-plugins-for-glassfish/netbeans/[GlassFish in Netbeans]
+
+== Arquillian Container
+
+* https://github.com/OmniFish-EE/arquillian-container-glassfish/tree/main/docs/src/asciidoc[Arquillian Container for GlassFish documentation]
 """
 
 
@@ -298,6 +297,7 @@ nav:
     # ROOT module
     root_pages = out_root / "modules" / "ROOT" / "pages"
     root_pages.mkdir(parents=True, exist_ok=True)
+    (root_pages / "developer-tools.adoc").write_text(build_developer_tools_page(), encoding="utf-8")
 
     # Determine release-notes entry (7.x uses release-notes.adoc, 8.x uses title.adoc)
     rn_src = src_docs_dir / "release-notes" / "src" / "main" / "asciidoc"
@@ -306,7 +306,7 @@ nav:
     else:
         rn_entry = "xref:release-notes:release-notes.adoc[Release Notes] — What's new and changed in this release."
 
-    index_content = build_index_page(modules, rn_entry)
+    index_content = build_index_page(rn_entry)
     (root_pages / "index.adoc").write_text(index_content, encoding="utf-8")
 
     # Build combined ROOT nav.adoc with section headers and all guide pages inlined
@@ -322,6 +322,9 @@ nav:
         guide_nav_path = out_root / "modules" / guide_name / "nav.adoc"
         if guide_nav_path.exists():
             root_nav_lines.append(guide_nav_path.read_text(encoding="utf-8"))
+        # Insert Developer Tools directly after Quick Start Guide
+        if guide_name == "quick-start-guide":
+            root_nav_lines.append("* xref:ROOT:developer-tools.adoc[Developer Tools]\n")
 
     (out_root / "modules" / "ROOT" / "nav.adoc").write_text("".join(root_nav_lines), encoding="utf-8")
 

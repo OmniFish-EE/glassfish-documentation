@@ -1,0 +1,34 @@
+= Eclipse GlassFish Documentation
+:description: Eclipse GlassFish is a full Jakarta EE application server.
+
+Welcome to the Eclipse GlassFish documentation.
+Select a guide from the navigation panel on the left, or use the search box to find what you need.
+
+== Developer Guides
+
+* xref:quick-start-guide:title.adoc[Quick Start Guide] — Get GlassFish running and deploy your first application.
+* xref:ROOT:developer-tools.adoc[Developer Tools] — Find external documentation for GlassFish developer tooling.
+* xref:application-development-guide:title.adoc[Application Development Guide] — Develop Jakarta EE applications for GlassFish.
+* xref:application-deployment-guide:title.adoc[Application Deployment Guide] — Deploy and manage applications.
+* xref:embedded-server-guide:title.adoc[Embedded Server Guide] — Embed GlassFish in your application or tests.
+* xref:add-on-component-development-guide:title.adoc[Add-On Component Development Guide] — Extend GlassFish with custom components.
+
+== Administration Guides
+
+* xref:administration-guide:title.adoc[Administration Guide] — Configure and administer GlassFish.
+* xref:installation-guide:title.adoc[Installation Guide] — Install GlassFish on your platform.
+* xref:security-guide:title.adoc[Security Guide] — Secure your GlassFish installation and applications.
+* xref:ha-administration-guide:title.adoc[High Availability Administration Guide] — Set up clustering and high availability.
+* xref:upgrade-guide:title.adoc[Upgrade Guide] — Upgrade from an earlier version.
+* xref:troubleshooting-guide:title.adoc[Troubleshooting Guide] — Diagnose and fix common issues.
+
+== Architecture and Planning
+
+* xref:deployment-planning-guide:title.adoc[Deployment Planning Guide] — Plan your GlassFish deployment topology.
+* xref:performance-tuning-guide:title.adoc[Performance Tuning Guide] — Tune GlassFish for production workloads.
+
+== Reference
+
+* xref:reference-manual:title.adoc[Reference Manual] — Complete reference for all asadmin subcommands.
+* xref:error-messages-reference:title.adoc[Error Messages Reference] — Descriptions and solutions for error messages.
+* {{release_notes_entry}}
