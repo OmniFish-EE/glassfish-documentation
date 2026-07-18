@@ -28,8 +28,10 @@ The site rebuilds automatically:
 .
 ├── antora-playbook.yml          # Antora build configuration
 ├── antora-ui-default.zip        # Antora default UI bundle (base theme)
-├── build_antora_content.py      # Transforms JBake adoc sources to Antora layout
-├── fix_xrefs.py                 # Fixes cross-guide xref links for Antora
+├── build_antora_content.py      # Transforms JBake adoc sources and fixes xrefs
+├── local-build/
+│   ├── build-site.sh            # Builds the site locally (steps 1–5)
+│   └── serve-site.sh            # Serves the site; supports --watch for auto-rebuild
 ├── supplemental-ui/             # Custom GlassFish theme (CSS, header, footer)
 │   ├── css/glassfish.css
 │   ├── partials/header-content.hbs
@@ -37,8 +39,8 @@ The site rebuilds automatically:
 │   ├── partials/head-styles.hbs
 │   └── img/glassfish-logo.png
 └── .github/workflows/
-  ├── build-and-deploy.yml     # GitHub Pages build + deploy workflow
-  └── upstream-docs-listener.yml # Polls upstream docs changes and triggers deploy
+    ├── build-and-deploy.yml     # GitHub Pages build + deploy workflow
+    └── upstream-docs-listener.yml # Polls upstream docs changes and triggers deploy
 ```
 
 The following directories are generated at build time and are not committed:
@@ -49,6 +51,57 @@ The following directories are generated at build time and are not committed:
 
 ## Building locally
 
+Two convenience scripts in `local-build/` cover the most common workflows.
+
+### Prerequisites
+
+- Node.js (for Antora — installed automatically if missing)
+- Python 3
+- Git
+- `inotify-tools` (Linux only, required for `--watch` mode): `sudo apt-get install inotify-tools`
+
+### Build the site
+
+```bash
+bash local-build/build-site.sh
+```
+
+This script:
+1. Installs Antora tooling via npm (skipped if already installed)
+2. Clones or updates the upstream GlassFish docs (sparse checkout of `docs/`)
+3. Transforms the sources into Antora layout (includes xref fixes)
+4. Initialises the Antora content git repo
+5. Builds the static site into `build/site/`
+
+### Serve the site
+
+```bash
+bash local-build/serve-site.sh
+```
+
+Serves the pre-built site at http://localhost:5000. Pass a port number to use a different port:
+
+```bash
+bash local-build/serve-site.sh 8080
+```
+
+### Serve with auto-rebuild on changes
+
+```bash
+bash local-build/serve-site.sh --watch
+```
+
+Runs a full build first, then watches for file changes and rebuilds automatically:
+
+- Changes in `supplemental-ui/`, `antora-playbook.yml`, or `antora-content/` trigger a **fast rebuild** (Antora only).
+- Changes in `glassfish-repo/docs/`, `build_antora_content.py`, or `docs-config.yml` trigger a **full rebuild** (transform + Antora).
+
+Open http://localhost:5000/glassfish/8.0-SNAPSHOT/index.html to view the site.
+
+### Manual steps (fallback)
+
+If the scripts do not work, you can run each step manually:
+
 ```bash
 # Install Antora
 npm install -g @antora/cli@3.1 @antora/site-generator@3.1 @antora/lunr-extension
@@ -58,9 +111,8 @@ git clone --depth 1 --filter=blob:none --sparse \
   https://github.com/eclipse-ee4j/glassfish.git glassfish-repo
 cd glassfish-repo && git sparse-checkout set docs && cd ..
 
-# Transform sources and fix xrefs
+# Transform sources (includes xref fixes)
 python3 build_antora_content.py
-python3 fix_xrefs.py
 
 # Initialise the content git repo (required by Antora)
 cd antora-content
