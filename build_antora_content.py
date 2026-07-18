@@ -215,6 +215,84 @@ def setup_guide_module(src_docs_dir: Path, out_root: Path, guide_name: str, disp
     return module_name
 
 
+# ── Arquillian Container module builder ───────────────────────────────────────
+
+ARQUILLIAN_REPO_DIR = REPO_ROOT / "arquillian-container-glassfish-repo"
+ARQUILLIAN_REPO_URL = "https://github.com/OmniFish-EE/arquillian-container-glassfish.git"
+ARQUILLIAN_DOCS_SUBDIR = "docs/src/main/asciidoc"
+ARQUILLIAN_MODULE_NAME = "arquillian-container"
+ARQUILLIAN_DISPLAY_NAME = "Arquillian Container"
+
+
+def ensure_arquillian_repo() -> Path:
+    """Shallow-clone or update the Arquillian container repo. Returns the asciidoc source dir."""
+    if not ARQUILLIAN_REPO_DIR.exists():
+        print("  Cloning Arquillian container docs...")
+        subprocess.run(
+            ["git", "clone", "--depth", "1", "--filter=blob:none", "--sparse",
+             ARQUILLIAN_REPO_URL, str(ARQUILLIAN_REPO_DIR)],
+            check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "sparse-checkout", "set", "docs/src/main/asciidoc"],
+            cwd=ARQUILLIAN_REPO_DIR, check=True, capture_output=True
+        )
+    else:
+        subprocess.run(
+            ["git", "fetch", "--depth", "1", "origin", "main"],
+            cwd=ARQUILLIAN_REPO_DIR, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "reset", "--hard", "origin/main"],
+            cwd=ARQUILLIAN_REPO_DIR, check=True, capture_output=True
+        )
+    return ARQUILLIAN_REPO_DIR / ARQUILLIAN_DOCS_SUBDIR
+
+
+def setup_arquillian_module(out_root: Path) -> str | None:
+    """Build the Antora module for Arquillian Container docs. Returns module name or None."""
+    try:
+        src_dir = ensure_arquillian_repo()
+    except subprocess.CalledProcessError as exc:
+        print(f"  SKIP {ARQUILLIAN_MODULE_NAME}: could not fetch repo ({exc})")
+        return None
+
+    if not src_dir.exists():
+        print(f"  SKIP {ARQUILLIAN_MODULE_NAME}: docs dir not found in repo")
+        return None
+
+    module_dir = out_root / "modules" / ARQUILLIAN_MODULE_NAME
+    pages_dir = module_dir / "pages"
+    pages_dir.mkdir(parents=True, exist_ok=True)
+
+    ordered = get_page_order(src_dir)
+
+    for fname in ordered:
+        if fname in SKIP_FILES:
+            continue
+        fpath = src_dir / fname
+        if not fpath.exists():
+            continue
+        content = fpath.read_text(encoding="utf-8", errors="replace")
+        _, body = parse_jbake_header(content)
+        body = process_adoc_body(body)
+        (pages_dir / fname).write_text(body, encoding="utf-8")
+
+    header_page = "title.adoc" if (pages_dir / "title.adoc").exists() else (ordered[0] if ordered else "title.adoc")
+
+    nav_entries = generate_nav_entries(src_dir, ordered, ARQUILLIAN_MODULE_NAME, header_page)
+    nav_content = f"* xref:{ARQUILLIAN_MODULE_NAME}:{header_page}[{ARQUILLIAN_DISPLAY_NAME}]\n"
+    for entry in nav_entries:
+        if entry.startswith("* ") and f":{header_page}[" in entry:
+            continue
+        nav_content += entry + "\n"
+    (module_dir / "nav.adoc").write_text(nav_content, encoding="utf-8")
+
+    page_count = len([f for f in ordered if f not in SKIP_FILES and (src_dir / f).exists()])
+    print(f"  OK  {ARQUILLIAN_MODULE_NAME}: {page_count} pages")
+    return ARQUILLIAN_MODULE_NAME
+
+
 # ── Index page builder ─────────────────────────────────────────────────────────
 
 INDEX_PAGE_TEMPLATE = REPO_ROOT / "templates" / "index-page.adoc"
@@ -250,7 +328,7 @@ This page collects external documentation for tools and integrations that help y
 
 == Arquillian Container
 
-* https://github.com/OmniFish-EE/arquillian-container-glassfish/tree/main/docs/src/asciidoc[Arquillian Container for GlassFish documentation]
+* xref:arquillian-container:title.adoc[Arquillian Container for GlassFish]
 """
 
 
@@ -290,6 +368,8 @@ nav:
         if module_name:
             modules.append((module_name, display_name))
 
+    arquillian_module = setup_arquillian_module(out_root)
+
     # antora.yml: only ROOT nav — all guide nav is inlined into ROOT/nav.adoc
     antora_yml = antora_yml_header  # nav already has ROOT entry
     (out_root / "antora.yml").write_text(antora_yml, encoding="utf-8")
@@ -322,9 +402,15 @@ nav:
         guide_nav_path = out_root / "modules" / guide_name / "nav.adoc"
         if guide_nav_path.exists():
             root_nav_lines.append(guide_nav_path.read_text(encoding="utf-8"))
-        # Insert Developer Tools directly after Quick Start Guide
+        # Insert Developer Tools + Arquillian directly after Quick Start Guide
         if guide_name == "quick-start-guide":
             root_nav_lines.append("* xref:ROOT:developer-tools.adoc[Developer Tools]\n")
+            if arquillian_module:
+                arq_nav_path = out_root / "modules" / arquillian_module / "nav.adoc"
+                if arq_nav_path.exists():
+                    arquillian_nav = arq_nav_path.read_text(encoding="utf-8")
+                    nested_arquillian_nav = re.sub(r"^(\*+) ", lambda m: f"{m.group(1)}* ", arquillian_nav, flags=re.MULTILINE)
+                    root_nav_lines.append(nested_arquillian_nav)
 
     (out_root / "modules" / "ROOT" / "nav.adoc").write_text("".join(root_nav_lines), encoding="utf-8")
 

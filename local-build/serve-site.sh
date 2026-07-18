@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEMP_DIR="$ROOT_DIR/temp"
 SITE_DIR="$ROOT_DIR/build/site"
 PORT="5000"
 WATCH_MODE="false"
@@ -41,11 +42,16 @@ resolve_main_version() {
 }
 
 PLAYBOOK_FILE="$ROOT_DIR/antora-playbook.yml"
+TEMP_CONTENT_REPO_DIR="$TEMP_DIR/antora-content-tmp"
+TEMP_PLAYBOOK_FILE="$TEMP_DIR/antora-playbook.tmp.yml"
+TEMP_UI_BUNDLE_FILE="$TEMP_DIR/antora-ui-default.zip"
+TEMP_SUPPLEMENTAL_DIR="$TEMP_DIR/supplemental-ui"
 
 generate_main_playbook() {
   local main_version="$1"
   local source_playbook="$ROOT_DIR/antora-playbook.yml"
-  local target_playbook="$ROOT_DIR/.antora-playbook.main.yml"
+  mkdir -p "$TEMP_DIR"
+  local target_playbook="$TEMP_DIR/antora-playbook.main.yml"
 
   python3 - "$source_playbook" "$target_playbook" "$main_version" <<'PY'
 import sys
@@ -81,6 +87,18 @@ WATCH_PID=""
 cleanup() {
   if [[ -n "$WATCH_PID" ]] && kill -0 "$WATCH_PID" 2>/dev/null; then
     kill "$WATCH_PID" 2>/dev/null || true
+  fi
+  if [[ -f "$TEMP_PLAYBOOK_FILE" ]]; then
+    rm -f "$TEMP_PLAYBOOK_FILE"
+  fi
+  if [[ -d "$TEMP_CONTENT_REPO_DIR" ]]; then
+    rm -rf "$TEMP_CONTENT_REPO_DIR"
+  fi
+  if [[ -f "$TEMP_UI_BUNDLE_FILE" ]]; then
+    rm -f "$TEMP_UI_BUNDLE_FILE"
+  fi
+  if [[ -d "$TEMP_SUPPLEMENTAL_DIR" ]]; then
+    rm -rf "$TEMP_SUPPLEMENTAL_DIR"
   fi
 }
 
@@ -138,10 +156,87 @@ if [[ "$WATCH_MODE" == "true" ]]; then
     fi
   }
 
+  prepare_temp_content_repo() {
+    local source_dir="$ROOT_DIR/antora-content"
+    if [[ ! -d "$source_dir" ]]; then
+      echo "Antora content directory not found: $source_dir"
+      return 1
+    fi
+
+    mkdir -p "$TEMP_DIR"
+
+    if [[ -f "$TEMP_PLAYBOOK_FILE" ]]; then
+      rm -f "$TEMP_PLAYBOOK_FILE"
+    fi
+    if [[ -d "$TEMP_CONTENT_REPO_DIR" ]]; then
+      rm -rf "$TEMP_CONTENT_REPO_DIR"
+    fi
+
+    mkdir -p "$TEMP_CONTENT_REPO_DIR"
+    cp -a "$source_dir/." "$TEMP_CONTENT_REPO_DIR/"
+
+    git -C "$TEMP_CONTENT_REPO_DIR" init -q
+    git -C "$TEMP_CONTENT_REPO_DIR" config user.email "actions@github.com"
+    git -C "$TEMP_CONTENT_REPO_DIR" config user.name "GitHub Actions"
+    git -C "$TEMP_CONTENT_REPO_DIR" add -A
+    if git -C "$TEMP_CONTENT_REPO_DIR" diff --cached --quiet; then
+      git -C "$TEMP_CONTENT_REPO_DIR" commit --allow-empty -m "Generated content" >/dev/null 2>&1
+    else
+      git -C "$TEMP_CONTENT_REPO_DIR" commit -m "Generated content" >/dev/null 2>&1
+    fi
+  }
+
+  prepare_temp_playbook() {
+    local source_playbook="$PLAYBOOK_FILE"
+    local source_ui_bundle="$ROOT_DIR/antora-ui-default.zip"
+    local source_supplemental_dir="$ROOT_DIR/supplemental-ui"
+    mkdir -p "$TEMP_DIR"
+    rm -f "$TEMP_PLAYBOOK_FILE"
+    rm -f "$TEMP_UI_BUNDLE_FILE"
+    rm -rf "$TEMP_SUPPLEMENTAL_DIR"
+
+    cp "$source_ui_bundle" "$TEMP_UI_BUNDLE_FILE"
+    cp -a "$source_supplemental_dir" "$TEMP_SUPPLEMENTAL_DIR"
+
+    python3 - "$source_playbook" "$TEMP_PLAYBOOK_FILE" "$TEMP_CONTENT_REPO_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    import subprocess
+    subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml", "-q"], check=True)
+    import yaml
+
+src = Path(sys.argv[1])
+dst = Path(sys.argv[2])
+temp_repo = sys.argv[3]
+
+data = yaml.safe_load(src.read_text(encoding="utf-8"))
+sources = data.get("content", {}).get("sources", [])
+for source in sources:
+    if str(source.get("url", "")) == "./antora-content":
+    source["url"] = f"./{Path(temp_repo).name}"
+
+ui = data.get("ui", {})
+bundle = ui.get("bundle", {})
+if isinstance(bundle.get("url"), str):
+    bundle["url"] = "./antora-ui-default.zip"
+
+if isinstance(ui.get("supplemental_files"), str):
+    ui["supplemental_files"] = "./supplemental-ui"
+
+dst.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+PY
+  }
+
   run_antora_build() {
     cd "$ROOT_DIR"
     ensure_scope_playbook
-    "$ANTORA_CMD" "$PLAYBOOK_FILE" --to-dir build/site
+    prepare_temp_content_repo
+    prepare_temp_playbook
+    "$ANTORA_CMD" "$TEMP_PLAYBOOK_FILE" --to-dir build/site
   }
 
   run_transform() {

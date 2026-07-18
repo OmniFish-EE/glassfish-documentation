@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEMP_DIR="$ROOT_DIR/temp"
 cd "$ROOT_DIR"
 
 BUILD_SCOPE="all"
@@ -35,11 +36,16 @@ resolve_main_version() {
 }
 
 PLAYBOOK_FILE="$ROOT_DIR/antora-playbook.yml"
+TEMP_CONTENT_REPO_DIR="$TEMP_DIR/antora-content-tmp"
+TEMP_PLAYBOOK_FILE="$TEMP_DIR/antora-playbook.tmp.yml"
+TEMP_UI_BUNDLE_FILE="$TEMP_DIR/antora-ui-default.zip"
+TEMP_SUPPLEMENTAL_DIR="$TEMP_DIR/supplemental-ui"
 
 generate_main_playbook() {
   local main_version="$1"
   local source_playbook="$ROOT_DIR/antora-playbook.yml"
-  local target_playbook="$ROOT_DIR/.antora-playbook.main.yml"
+  mkdir -p "$TEMP_DIR"
+  local target_playbook="$TEMP_DIR/antora-playbook.main.yml"
 
   python3 - "$source_playbook" "$target_playbook" "$main_version" <<'PY'
 import sys
@@ -68,6 +74,92 @@ dst.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
 PY
 
   PLAYBOOK_FILE="$target_playbook"
+}
+
+cleanup_temp_artifacts() {
+  if [[ -f "$TEMP_PLAYBOOK_FILE" ]]; then
+    rm -f "$TEMP_PLAYBOOK_FILE"
+  fi
+  if [[ -d "$TEMP_CONTENT_REPO_DIR" ]]; then
+    rm -rf "$TEMP_CONTENT_REPO_DIR"
+  fi
+  if [[ -f "$TEMP_UI_BUNDLE_FILE" ]]; then
+    rm -f "$TEMP_UI_BUNDLE_FILE"
+  fi
+  if [[ -d "$TEMP_SUPPLEMENTAL_DIR" ]]; then
+    rm -rf "$TEMP_SUPPLEMENTAL_DIR"
+  fi
+}
+
+trap cleanup_temp_artifacts EXIT INT TERM
+
+prepare_temp_content_repo() {
+  local source_dir="$ROOT_DIR/antora-content"
+  if [[ ! -d "$source_dir" ]]; then
+    echo "Antora content directory not found: $source_dir"
+    exit 1
+  fi
+
+  mkdir -p "$TEMP_DIR"
+
+  rm -rf "$TEMP_CONTENT_REPO_DIR"
+  mkdir -p "$TEMP_CONTENT_REPO_DIR"
+  cp -a "$source_dir/." "$TEMP_CONTENT_REPO_DIR/"
+
+  git -C "$TEMP_CONTENT_REPO_DIR" init -q
+  git -C "$TEMP_CONTENT_REPO_DIR" config user.email "actions@github.com"
+  git -C "$TEMP_CONTENT_REPO_DIR" config user.name "GitHub Actions"
+  git -C "$TEMP_CONTENT_REPO_DIR" add -A
+  if git -C "$TEMP_CONTENT_REPO_DIR" diff --cached --quiet; then
+    git -C "$TEMP_CONTENT_REPO_DIR" commit --allow-empty -m "Generated content" >/dev/null 2>&1
+  else
+    git -C "$TEMP_CONTENT_REPO_DIR" commit -m "Generated content" >/dev/null 2>&1
+  fi
+}
+
+prepare_temp_playbook() {
+  local source_playbook="$PLAYBOOK_FILE"
+  local source_ui_bundle="$ROOT_DIR/antora-ui-default.zip"
+  local source_supplemental_dir="$ROOT_DIR/supplemental-ui"
+  mkdir -p "$TEMP_DIR"
+  rm -f "$TEMP_PLAYBOOK_FILE"
+  rm -f "$TEMP_UI_BUNDLE_FILE"
+  rm -rf "$TEMP_SUPPLEMENTAL_DIR"
+
+  cp "$source_ui_bundle" "$TEMP_UI_BUNDLE_FILE"
+  cp -a "$source_supplemental_dir" "$TEMP_SUPPLEMENTAL_DIR"
+
+  python3 - "$source_playbook" "$TEMP_PLAYBOOK_FILE" "$TEMP_CONTENT_REPO_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    import subprocess
+    subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml", "-q"], check=True)
+    import yaml
+
+src = Path(sys.argv[1])
+dst = Path(sys.argv[2])
+temp_repo = sys.argv[3]
+
+data = yaml.safe_load(src.read_text(encoding="utf-8"))
+sources = data.get("content", {}).get("sources", [])
+for source in sources:
+    if str(source.get("url", "")) == "./antora-content":
+        source["url"] = f"./{Path(temp_repo).name}"
+
+ui = data.get("ui", {})
+bundle = ui.get("bundle", {})
+if isinstance(bundle.get("url"), str):
+    bundle["url"] = "./antora-ui-default.zip"
+
+if isinstance(ui.get("supplemental_files"), str):
+    ui["supplemental_files"] = "./supplemental-ui"
+
+dst.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+PY
 }
 
 NPM_GLOBAL_BIN="$(npm prefix -g)/bin"
@@ -132,24 +224,12 @@ else
   python3 build_antora_content.py
 fi
 
-echo "[4/5] Initializing Antora content git repository"
-mkdir -p antora-content
-cd antora-content
-if [[ ! -d .git ]]; then
-  git init
-fi
-git config user.email "actions@github.com"
-git config user.name "GitHub Actions"
-git add -A
-if git diff --cached --quiet; then
-  echo "No content changes to commit"
-else
-  git commit -m "Generated content"
-fi
-cd "$ROOT_DIR"
+echo "[4/5] Preparing temporary Antora content git repository"
+prepare_temp_content_repo
+prepare_temp_playbook
 
 echo "[5/5] Building Antora site"
-"$ANTORA_CMD" "$PLAYBOOK_FILE" --to-dir build/site
+"$ANTORA_CMD" "$TEMP_PLAYBOOK_FILE" --to-dir build/site
 
 echo "Build completed: $ROOT_DIR/build/site"
 

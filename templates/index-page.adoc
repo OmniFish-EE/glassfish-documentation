@@ -8,6 +8,7 @@ Select a guide from the navigation panel on the left, or use the search box to f
 
 * xref:quick-start-guide:title.adoc[Quick Start Guide] — Get GlassFish running and deploy your first application.
 * xref:ROOT:developer-tools.adoc[Developer Tools] — Find external documentation for GlassFish developer tooling.
+* xref:arquillian-container:title.adoc[Arquillian Container] — Run Arquillian tests against GlassFish (managed, remote, embedded).
 * xref:application-development-guide:title.adoc[Application Development Guide] — Develop Jakarta EE applications for GlassFish.
 * xref:application-deployment-guide:title.adoc[Application Deployment Guide] — Deploy and manage applications.
 * xref:embedded-server-guide:title.adoc[Embedded Server Guide] — Embed GlassFish in your application or tests.
