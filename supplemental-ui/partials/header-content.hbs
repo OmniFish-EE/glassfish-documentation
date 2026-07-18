@@ -1,11 +1,12 @@
 <header class="header gf-header">
   <nav class="navbar gf-navbar">
     <div class="navbar-brand">
-      <a class="navbar-item gf-logo-link" href="https://glassfish.org">
-        <img src="{{{uiRootPath}}}/img/glassfish-logo.png" alt="Eclipse GlassFish" class="gf-logo">
-      </a>
-      <a class="navbar-item gf-site-title" href="{{{siteRootPath}}}/glassfish/8.0-SNAPSHOT/index.html">
-        Eclipse GlassFish Documentation
+      <a class="navbar-item gf-omnifish-brand" href="https://omnifish.ee/glassfish-support/" target="_blank" rel="noopener noreferrer">
+        <img src="https://omnifish.ee/wp-content/uploads/2024/12/omnifish-logo-turquise-transparent-bigger-text-400px-300x207.png" alt="OmniFish" class="gf-brand-bridge-logo">
+        <span class="gf-brand-bridge-copy">
+          <span class="gf-brand-bridge-name">OmniFish</span>
+          <span class="gf-brand-bridge-tagline">Modern Jakarta EE runtimes</span>
+        </span>
       </a>
       {{#if env.SITE_SEARCH_PROVIDER}}
       <div class="navbar-item search hide-for-print">
@@ -17,17 +18,9 @@
         </div>
       </div>
       {{/if}}
-      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-    <div id="topbar-nav" class="navbar-menu">
-      <div class="navbar-end">
-        <a class="navbar-item" href="https://glassfish.org/download">Download</a>
-        <a class="navbar-item" href="https://glassfish.org/documentation">All Docs</a>
-        <a class="navbar-item" href="https://github.com/eclipse-ee4j/glassfish" target="_blank" rel="noopener">GitHub</a>
+      <div class="navbar-item gf-brand-bridge">
+        <img src="{{{uiRootPath}}}/img/glassfish-logo.png" alt="Eclipse GlassFish" class="gf-logo">
+        <span class="gf-site-title gf-bridge-title">Eclipse GlassFish Documentation</span>
       </div>
     </div>
   </nav>

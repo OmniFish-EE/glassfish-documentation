@@ -2,10 +2,7 @@
  * GlassFish Documentation Site Theme
  * Matches the color palette and style of glassfish.org
  *
- * Primary color: #3f7b96 (teal-blue, used for nav sidebar, links, headings)
- * Secondary:     #5297b6 (lighter teal for borders/hover)
- * Background:    #f4f4f4 (light grey for nav bar)
- * Text:          #222
+ * Primary, secondary, background, and text colors are defined below.
  */
 
 /* ── Variables ─────────────────────────────────────────────── */
@@ -23,6 +20,36 @@
   --gf-text:          #222;
   --gf-border:        #d0d0d0;
   --gf-code-bg:       #f5f7fa;
+  --gf-white:         #ffffff;
+  --gf-transparent:   transparent;
+  --gf-header-border:  rgba(255,255,255,.28);
+  --gf-header-surface: rgba(255,255,255,.08);
+  --gf-header-surface-border: rgba(255,255,255,.12);
+  --gf-header-input-border: rgba(255,255,255,.45);
+  --gf-header-input-border-focus: rgba(255,255,255,.7);
+  --gf-header-input-shadow: rgba(255,255,255,.18);
+  --gf-header-muted:   var(#375574);
+  --gf-nav-link:       #444;
+  --gf-code-border:    #e0e4ea;
+  --gf-code-fg:        #c7254e;
+  --gf-pre-border:     #dde3ea;
+  --gf-table-alt-bg:   #f8fbfd;
+  --gf-note-bg:        #e8f3f8;
+  --gf-tip-bg:         #eafaf1;
+  --gf-tip-border:     #27ae60;
+  --gf-warning-bg:     #fef9e7;
+  --gf-warning-border: #f39c12;
+  --gf-caution-bg:     #fdf2f2;
+  --gf-caution-border: #e74c3c;
+  --gf-important-border: #c0392b;
+  --gf-toolbar-bg:     #ffffff;
+  --gf-toc-link:       #555;
+  --gf-footer-fg:      rgba(238,238,238,.88);
+  --gf-footer-link:    rgba(238,238,238,.9);
+  --gf-footer-muted:   rgba(238,238,238,.78);
+  --gf-footer-border:  rgba(255,255,255,.15);
+  --gf-header-shadow:  rgba(0,0,0,.12);
+  --gf-highlight-bg:   #fff3cd;
   --gf-font:          'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -52,6 +79,11 @@ body {
   z-index: 30;
 }
 
+.gf-navbar .navbar-brand {
+  align-items: center;
+  min-width: 0;
+}
+
 .gf-navbar .navbar-menu,
 .gf-navbar .navbar-menu.is-active {
   background-color: var(--gf-header-bg);
@@ -62,16 +94,67 @@ body {
   width: auto;
 }
 
-.gf-logo-link {
-  padding: 0.5rem 0.9rem;
-}
-
 .gf-site-title {
   font-size: 1.15rem;
   font-weight: 600;
   color: var(--gf-header-fg) !important;
-  border-left: 1px solid rgba(255,255,255,.28);
+  border-left: 1px solid var(--gf-header-border);
   padding-left: 1rem;
+}
+
+.gf-brand-bridge {
+  margin-left: auto;
+  margin-right: auto;
+  gap: 0.75rem;
+  color: var(--gf-header-fg) !important;
+  text-decoration: none;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.gf-bridge-title {
+  border-left: none;
+  padding-left: 0;
+}
+
+.gf-brand-bridge-logo {
+  height: 2.75rem;
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.gf-brand-bridge-copy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+  text-align: left;
+}
+
+.gf-brand-bridge-name {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.gf-brand-bridge-tagline {
+  font-size: 0.82rem;
+  font-weight: 400;
+  opacity: 0.95;
+}
+
+.gf-omnifish-brand {
+  gap: 0.75rem;
+  color: var(--gf-header-fg) !important;
+  text-decoration: none;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.gf-omnifish-brand:hover,
+.gf-omnifish-brand:focus {
+  color: var(--gf-header-hover) !important;
 }
 
 /* Add breathing room between the fixed header and page content. */
@@ -100,7 +183,7 @@ body {
 
 .gf-navbar .navbar-end .navbar-item:hover {
   color: var(--gf-header-hover);
-  background: rgba(255,255,255,.08);
+  background: var(--gf-header-surface);
 }
 
 .gf-navbar .navbar-item:hover,
@@ -113,12 +196,56 @@ body {
 .gf-navbar .navbar-burger,
 .gf-navbar .navbar-burger:hover {
   color: var(--gf-header-fg);
-  background: transparent;
+  background: var(--gf-transparent);
+}
+
+@media screen and (max-width: 900px) {
+  .gf-brand-bridge-copy {
+    max-width: 120px;
+  }
+
+  .gf-brand-bridge-tagline {
+    display: block;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .gf-brand-bridge {
+    white-space: normal;
+  }
+
+  .gf-bridge-title {
+    display: block;
+    max-width: 200px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .gf-logo {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .gf-omnifish-brand .gf-brand-bridge-logo {
+    display: none;
+  }
+
+  .gf-bridge-title {
+    display: none;
+  }
 }
 
 @media screen and (max-width: 1023px) {
   .gf-header + .body {
     padding-top: 0.5rem;
+  }
+
+  .gf-omnifish-brand,
+  .gf-brand-bridge {
+    display: none;
   }
 
   .gf-header .navbar-menu,
@@ -134,7 +261,7 @@ body {
   .gf-navbar .navbar-menu .navbar-item,
   .gf-navbar .navbar-menu .navbar-link {
     color: var(--gf-header-fg) !important;
-    border-top: 1px solid rgba(255,255,255,.12);
+    border-top: 1px solid var(--gf-header-surface-border);
   }
 
   .gf-header .navbar-menu .navbar-item:hover,
@@ -142,15 +269,15 @@ body {
   .gf-navbar .navbar-menu .navbar-item:hover,
   .gf-navbar .navbar-menu .navbar-link:hover {
     color: var(--gf-header-hover) !important;
-    background: rgba(255,255,255,.08) !important;
+    background: var(--gf-header-surface) !important;
   }
 }
 
 /* Search input in header */
 #search-input {
-  border: 1px solid rgba(255,255,255,.45);
-  background: rgba(255,255,255,.08);
-  color: var(--gf-header-fg);
+  border: 1px solid var(--gf-header-input-border);
+  background: var(--gf-white);
+  color: var(--gf-text);
   border-radius: 4px;
   padding: 0.35rem 0.75rem;
   font-size: 0.9rem;
@@ -159,12 +286,12 @@ body {
 }
 
 #search-input::placeholder {
-  color: rgba(238,238,238,.85);
+  color: var(--gf-header-muted);
 }
 
 #search-input:focus {
-  border-color: var(--gf-header-fg);
-  box-shadow: 0 0 0 2px rgba(255,255,255,.2);
+  border-color: var(--gf-header-input-border-focus);
+  box-shadow: 0 0 0 2px var(--gf-header-input-shadow);
 }
 
 /* ── Left Navigation ────────────────────────────────────────── */
@@ -193,7 +320,7 @@ body {
 /* Nav links */
 .nav-link,
 .nav-link:visited {
-  color: #444;
+  color: var(--gf-nav-link);
 }
 
 .nav-link:hover {
@@ -203,7 +330,7 @@ body {
 /* Nav panel title (component name) */
 .context .version {
   background-color: var(--gf-primary);
-  color: #fff;
+  color: var(--gf-white);
 }
 
 /* ── Content Area ───────────────────────────────────────────── */
@@ -256,16 +383,16 @@ body {
 .doc code,
 .doc kbd {
   background-color: var(--gf-code-bg);
-  border: 1px solid #e0e4ea;
+  border: 1px solid var(--gf-code-border);
   border-radius: 3px;
   font-size: 0.875em;
   padding: 0.1em 0.35em;
-  color: #c7254e;
+  color: var(--gf-code-fg);
 }
 
 .doc pre {
   background-color: var(--gf-code-bg);
-  border: 1px solid #dde3ea;
+  border: 1px solid var(--gf-pre-border);
   border-left: 4px solid var(--gf-primary);
   border-radius: 4px;
   padding: 1rem 1.25rem;
@@ -292,7 +419,7 @@ body {
 
 .doc table th {
   background-color: var(--gf-primary);
-  color: #fff;
+  color: var(--gf-white);
   padding: 0.5rem 0.75rem;
   text-align: left;
   font-weight: 600;
@@ -304,7 +431,7 @@ body {
 }
 
 .doc table tr:nth-child(even) td {
-  background-color: #f8fbfd;
+  background-color: var(--gf-table-alt-bg);
 }
 
 /* Admonition blocks */
@@ -315,28 +442,28 @@ body {
 }
 
 .doc .admonitionblock.note {
-  background-color: #e8f3f8;
+  background-color: var(--gf-note-bg);
   border-left: 4px solid var(--gf-primary);
 }
 
 .doc .admonitionblock.tip {
-  background-color: #eafaf1;
-  border-left: 4px solid #27ae60;
+  background-color: var(--gf-tip-bg);
+  border-left: 4px solid var(--gf-tip-border);
 }
 
 .doc .admonitionblock.warning {
-  background-color: #fef9e7;
-  border-left: 4px solid #f39c12;
+  background-color: var(--gf-warning-bg);
+  border-left: 4px solid var(--gf-warning-border);
 }
 
 .doc .admonitionblock.caution {
-  background-color: #fdf2f2;
-  border-left: 4px solid #e74c3c;
+  background-color: var(--gf-caution-bg);
+  border-left: 4px solid var(--gf-caution-border);
 }
 
 .doc .admonitionblock.important {
-  background-color: #fdf2f2;
-  border-left: 4px solid #c0392b;
+  background-color: var(--gf-caution-bg);
+  border-left: 4px solid var(--gf-important-border);
 }
 
 .doc .admonitionblock td.icon {
@@ -349,14 +476,14 @@ body {
 }
 
 .doc .admonitionblock.note td.icon { color: var(--gf-primary); }
-.doc .admonitionblock.tip td.icon { color: #27ae60; }
-.doc .admonitionblock.warning td.icon { color: #f39c12; }
+.doc .admonitionblock.tip td.icon { color: var(--gf-tip-border); }
+.doc .admonitionblock.warning td.icon { color: var(--gf-warning-border); }
 .doc .admonitionblock.caution td.icon,
-.doc .admonitionblock.important td.icon { color: #e74c3c; }
+.doc .admonitionblock.important td.icon { color: var(--gf-caution-border); }
 
 /* ── Toolbar (breadcrumbs + version) ────────────────────────── */
 .toolbar {
-  background-color: #fff;
+  background-color: var(--gf-toolbar-bg);
   border-bottom: 1px solid var(--gf-border);
   font-size: 0.85rem;
   top: var(--gf-header-height);
@@ -375,7 +502,7 @@ body {
 
 .toc-menu a,
 .toc-menu a:visited {
-  color: #555;
+  color: var(--gf-toc-link);
 }
 
 .toc-menu a:hover {
@@ -390,7 +517,7 @@ body {
 /* ── Footer ─────────────────────────────────────────────────── */
 .gf-footer {
   background-color: var(--gf-header-bg);
-  color: rgba(238,238,238,.88);
+  color: var(--gf-footer-fg);
   padding: 2.5rem 1.5rem 1.5rem;
   font-size: 0.875rem;
 }
@@ -398,7 +525,7 @@ body {
 footer.gf-footer,
 .footer.gf-footer {
   background-color: var(--gf-header-bg) !important;
-  color: rgba(238,238,238,.88) !important;
+  color: var(--gf-footer-fg) !important;
 }
 
 .gf-footer-inner {
@@ -415,7 +542,7 @@ footer.gf-footer,
 
 .gf-footer-col strong {
   display: block;
-  color: #fff;
+  color: var(--gf-white);
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -434,7 +561,7 @@ footer.gf-footer,
 
 .gf-footer-col a,
 .gf-footer-col a:visited {
-  color: rgba(238,238,238,.9);
+  color: var(--gf-footer-link);
   text-decoration: none;
 }
 
@@ -442,30 +569,30 @@ footer.gf-footer a,
 footer.gf-footer a:visited,
 .footer.gf-footer a,
 .footer.gf-footer a:visited {
-  color: rgba(238,238,238,.9) !important;
+  color: var(--gf-footer-link) !important;
 }
 
 .gf-footer-col a:hover {
-  color: #fff;
+  color: var(--gf-white);
   text-decoration: underline;
 }
 
 .gf-footer-bottom {
-  border-top: 1px solid rgba(255,255,255,.15);
+  border-top: 1px solid var(--gf-footer-border);
   padding-top: 1rem;
   text-align: center;
   font-size: 0.8rem;
-  color: rgba(238,238,238,.78);
+  color: var(--gf-footer-muted);
   max-width: 1200px;
   margin: 0 auto;
 }
 
 .gf-footer-bottom a {
-  color: rgba(238,238,238,.92);
+  color: var(--gf-footer-link);
 }
 
 .gf-footer-bottom a:hover {
-  color: #fff;
+  color: var(--gf-white);
 }
 
 /* ── Version selector in nav ────────────────────────────────── */
@@ -474,7 +601,7 @@ footer.gf-footer a:visited,
   align-items: center;
   gap: 0.4rem;
   background-color: var(--gf-primary);
-  color: #fff;
+  color: var(--gf-white);
   border-radius: 4px;
   padding: 0.3rem 0.6rem;
   font-size: 0.8rem;
@@ -495,7 +622,7 @@ footer.gf-footer a:visited,
   justify-content: space-between;
   gap: 0.5rem;
   background-color: var(--gf-primary);
-  color: #fff;
+  color: var(--gf-white);
   border: 1px solid var(--gf-primary-dark);
   border-radius: 4px;
   font-size: 0.8rem;
@@ -549,11 +676,11 @@ footer.gf-footer a:visited,
 #search-result-container {
   border: 1px solid var(--gf-border);
   border-radius: 4px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  box-shadow: 0 4px 16px var(--gf-header-shadow);
 }
 
 .search-result-highlight {
-  background-color: #fff3cd;
+  background-color: var(--gf-highlight-bg);
   border-radius: 2px;
   padding: 0 2px;
 }
@@ -562,5 +689,12 @@ footer.gf-footer a:visited,
 @media screen and (max-width: 768px) {
   .gf-footer-inner {
     flex-direction: column;
+  }
+}
+
+@media print {
+  .gf-header,
+  .gf-footer {
+    display: none !important;
   }
 }
