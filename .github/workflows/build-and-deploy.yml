@@ -49,6 +49,12 @@ jobs:
           cd glassfish-repo
           git sparse-checkout set docs
 
+      - name: Set up Java and Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Transform sources to Antora layout (all versions)
         run: python3 build_antora_content.py
 

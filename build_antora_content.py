@@ -18,6 +18,8 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 try:
@@ -122,7 +124,8 @@ def get_page_order(guide_dir: Path) -> list[str]:
     return ordered
 
 
-def generate_nav_entries(guide_dir: Path, ordered_files: list[str], module_name: str, header_page: str) -> list[str]:
+def generate_nav_entries(guide_dir: Path, ordered_files: list[str], module_name: str, header_page: str,
+                         attr_map: dict[str, str] | None = None) -> list[str]:
     """Generate nav.adoc list entries for a guide, with sub-pages nested under the guide title."""
     entries = []
     for fname in ordered_files:
@@ -135,7 +138,10 @@ def generate_nav_entries(guide_dir: Path, ordered_files: list[str], module_name:
             content = fpath.read_text(encoding="utf-8", errors="replace")
             meta, _ = parse_jbake_header(content)
             title = meta.get("title", fname.replace(".adoc", "").replace("-", " ").title())
-            title = re.sub(r"\{[^}]+\}", "GlassFish", title)
+            if attr_map:
+                for key, val in attr_map.items():
+                    title = re.sub(rf"\{{\s*{re.escape(key)}\s*\}}", val, title)
+            title = re.sub(r"\s*\{[^}]+\}", "", title).strip()
         except Exception:
             title = fname.replace(".adoc", "")
         # Guide title page is level 1 (*), all other pages are nested (**)
@@ -163,7 +169,8 @@ def process_adoc_body(body: str) -> str:
 
 # ── Per-guide module builder ───────────────────────────────────────────────────
 
-def setup_guide_module(src_docs_dir: Path, out_root: Path, guide_name: str, display_name: str) -> str | None:
+def setup_guide_module(src_docs_dir: Path, out_root: Path, guide_name: str, display_name: str,
+                        attr_map: dict[str, str] | None = None) -> str | None:
     """Set up one Antora module for a guide. Returns module_name or None."""
     src_dir = src_docs_dir / guide_name / "src" / "main" / "asciidoc"
     if not src_dir.exists():
@@ -199,7 +206,7 @@ def setup_guide_module(src_docs_dir: Path, out_root: Path, guide_name: str, disp
     # Determine the nav header page (title.adoc or first real page)
     header_page = "title.adoc" if (pages_dir / "title.adoc").exists() else ordered[0] if ordered else "title.adoc"
 
-    nav_entries = generate_nav_entries(src_dir, ordered, module_name, header_page)
+    nav_entries = generate_nav_entries(src_dir, ordered, module_name, header_page, attr_map)
     # The first entry is the guide title at level 1 with the display name
     nav_content = f"* xref:{module_name}:{header_page}[{display_name}]\n"
     for entry in nav_entries:
@@ -522,6 +529,57 @@ This page collects external documentation for tools and integrations that help y
 """
 
 
+# ── Maven property loader ─────────────────────────────────────────────────────
+
+def load_maven_properties(docs_dir: Path) -> dict[str, str]:
+    """
+    Run mvn help:effective-pom on the docs POM and return a dict of all resolved
+    properties, keyed by both the original name and a variant where '.' is
+    replaced with '-' to match AsciiDoc/Antora attribute references.
+    """
+    pom_path = docs_dir / "pom.xml"
+    if not pom_path.exists():
+        print(f"  WARN load_maven_properties: POM not found at {pom_path}, skipping")
+        return {}
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
+            tmp_path = tmp.name
+        result = subprocess.run(
+            ["mvn", "help:effective-pom", f"-Doutput={tmp_path}", "-q", "-f", str(pom_path)],
+            capture_output=True, text=True, timeout=120,
+        )
+        if result.returncode != 0:
+            print(f"  WARN load_maven_properties: mvn failed: {result.stderr.strip()[:200]}")
+            return {}
+
+        tree = ET.parse(tmp_path)
+        root = tree.getroot()
+        ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+        raw: dict[str, str] = {}
+        # Effective POM wraps multiple <project> elements in a root element.
+        for proj in root.findall(".//m:project", ns):
+            for prop in proj.findall("m:properties/", ns):
+                name = prop.tag.split("}")[1] if "}" in prop.tag else prop.tag
+                value = prop.text or ""
+                raw[name] = value
+
+        # Build final map: include both original name and '.' -> '-' variant.
+        props: dict[str, str] = {}
+        for name, value in raw.items():
+            props[name] = value
+            hyphenated = name.replace(".", "-")
+            if hyphenated != name:
+                props[hyphenated] = value
+
+        Path(tmp_path).unlink(missing_ok=True)
+        return props
+
+    except Exception as exc:
+        print(f"  WARN load_maven_properties: {exc}")
+        return {}
+
+
 # ── Per-version builder ────────────────────────────────────────────────────────
 
 def build_version(antora_version: str, git_ref: str, major_version: str,
@@ -552,9 +610,62 @@ nav:
   - modules/ROOT/nav.adoc
 """
 
+    # Load all resolved Maven properties and add explicit per-version overrides.
+    attr_map = load_maven_properties(src_docs_dir)
+    attr_map.update({
+        "productName": "Eclipse GlassFish",
+        "product-majorVersion": major_version,
+        "product.majorVersion": major_version,
+    })
+
+    # Emit Maven properties as Antora/AsciiDoc attributes in antora.yml so they
+    # are resolved in page bodies (not just nav titles).
+    # Skip Maven build-infrastructure properties that are not useful in docs.
+    _SKIP_PREFIXES = (
+        "maven.", "project.", "build.", "plugin.", "exec.", "failsafe.",
+        "checkstyle.", "cyclonedx.", "deploy.", "asciidoc.", "pdf.",
+        "html.", "bookDirectory", "file.", "glassfish.distribution",
+        "glassfish.generate", "command.security", "domain.template",
+        "aether.", "java.version",
+    )
+    def _is_doc_attr(name: str) -> bool:
+        return not any(name.startswith(p) for p in _SKIP_PREFIXES)
+
+    # Keys already declared in the hardcoded antora.yml block must not be repeated.
+    _EXPLICIT_KEYS = {"productName", "product-majorVersion", "jakartaee", "status"}
+
+    extra_asciidoc_attrs = ""
+    for name, value in sorted(attr_map.items()):
+        # Only emit the hyphenated form (dots already replaced), skip pure dot form.
+        if "." in name:
+            continue
+        if not _is_doc_attr(name):
+            continue
+        if name in _EXPLICIT_KEYS:
+            continue
+        if not value or "${" in value:
+            continue
+        # Escape single quotes in values for YAML safety.
+        safe_value = value.replace("'", "''")
+        extra_asciidoc_attrs += f"    {name}: '{safe_value}'\n"
+
+    antora_yml_header = f"""name: glassfish
+title: Eclipse GlassFish Documentation
+version: '{antora_version}'
+display_version: '{display_label}'
+{prerelease_line}asciidoc:
+  attributes:
+    productName: Eclipse GlassFish
+    product-majorVersion: '{major_version}'
+    jakartaee: '{jakartaee}'
+    status: {status}
+{extra_asciidoc_attrs}nav:
+  - modules/ROOT/nav.adoc
+"""
+
     modules = []
     for guide_name, display_name, _section in GUIDES:
-        module_name = setup_guide_module(src_docs_dir, out_root, guide_name, display_name)
+        module_name = setup_guide_module(src_docs_dir, out_root, guide_name, display_name, attr_map)
         if module_name:
             modules.append((module_name, display_name))
 
