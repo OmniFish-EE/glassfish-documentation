@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OmniFish Documentation</title>
+    <meta name="description" content="Overview of documentation published by OmniFish.">
+    <link rel="stylesheet" href="/_/css/site.css">
+    <link rel="stylesheet" href="/_/css/glassfish.css">
+    <style>
+      :root {
+        --bg-1: #06121a;
+        --bg-2: #0b2a3a;
+        --card: #f5f7f8;
+        --ink: #0a2230;
+        --cta: #00a6a6;
+        --cta-hover: #008c8c;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(1200px 500px at 10% 10%, #165a75 0%, transparent 60%),
+          linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 100%);
+      }
+
+      .page {
+        min-height: calc(100vh - 66px);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .panel {
+        width: min(780px, 100%);
+        background: color-mix(in oklab, var(--card) 92%, white 8%);
+        color: var(--ink);
+        border-radius: 16px;
+        box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+        padding: clamp(20px, 4vw, 40px);
+      }
+
+      h1 {
+        margin: 0 0 14px;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 0;
+        font-size: clamp(1rem, 2vw, 1.15rem);
+        line-height: 1.6;
+      }
+
+      .cta-row {
+        margin-top: 28px;
+      }
+
+      .cta {
+        display: inline-block;
+        text-decoration: none;
+        color: #fff;
+        background: var(--cta);
+        border-radius: 999px;
+        padding: 14px 24px;
+        font-weight: 700;
+        transition: background-color 120ms ease-in-out, transform 120ms ease-in-out;
+      }
+
+      .cta:hover,
+      .cta:focus-visible {
+        background: var(--cta-hover);
+        transform: translateY(-1px);
+      }
+
+      .note {
+        margin-top: 18px;
+        font-size: 0.95rem;
+        color: #35515f;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header gf-header" role="banner">
+      <nav class="navbar gf-navbar" aria-label="OmniFish">
+        <div class="navbar-brand">
+          <a class="navbar-item gf-omnifish-brand" href="https://omnifish.ee/solutions" target="_blank" rel="noopener noreferrer">
+            <img src="https://omnifish.ee/wp-content/uploads/2024/12/omnifish-logo-turquise-transparent-bigger-text-400px-300x207.png" alt="OmniFish" class="gf-brand-bridge-logo">
+            <span class="gf-brand-bridge-copy">
+              <span class="gf-brand-bridge-name">OmniFish</span>
+              <span class="gf-brand-bridge-tagline">Modern Jakarta EE runtimes</span>
+            </span>
+          </a>
+        </div>
+      </nav>
+    </header>
+    <div class="page">
+      <main class="panel">
+        <h1>OmniFish Documentation</h1>
+        <p>
+          Welcome to the OmniFish documentation hub. Here you can find official guides for
+          OmniFish-maintained runtimes and tools.
+        </p>
+        <div class="cta-row">
+          <a class="cta" href="/glassfish/latest/index.html">Open GlassFish Documentation</a>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

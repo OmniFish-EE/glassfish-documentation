@@ -179,6 +179,7 @@ prepare_temp_playbook
 
 echo "[5/5] Building Antora site"
 "$ANTORA_CMD" "$TEMP_PLAYBOOK_FILE" --to-dir build/site
+bash "$ROOT_DIR/install_root_landing_page.sh"
 
 echo "Build completed: $ROOT_DIR/build/site"
 

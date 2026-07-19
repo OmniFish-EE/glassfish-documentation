@@ -190,6 +190,7 @@ if [[ "$WATCH_MODE" == "true" ]]; then
       return 1
     fi
     "$ANTORA_CMD" "$TEMP_PLAYBOOK_FILE" --to-dir build/site
+    bash "$ROOT_DIR/install_root_landing_page.sh" "$SITE_DIR"
   }
 
   run_transform() {

@@ -64,6 +64,9 @@ jobs:
       - name: Build Antora site
         run: antora antora-playbook.yml --to-dir build/site
 
+      - name: Install OmniFish root landing page
+        run: bash install_root_landing_page.sh
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
