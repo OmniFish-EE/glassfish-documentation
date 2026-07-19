@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMP_DIR="$ROOT_DIR/temp"
+LOCAL_BUILD_SCRIPTS_DIR="$ROOT_DIR/local-build/scripts"
 SITE_DIR="$ROOT_DIR/build/site"
 PORT="5000"
 WATCH_MODE="false"
@@ -53,31 +54,8 @@ generate_main_playbook() {
   mkdir -p "$TEMP_DIR"
   local target_playbook="$TEMP_DIR/antora-playbook.main.yml"
 
-  python3 - "$source_playbook" "$target_playbook" "$main_version" <<'PY'
-import sys
-from pathlib import Path
-
-try:
-    import yaml
-except ImportError:
-    import subprocess
-    subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml", "-q"], check=True)
-    import yaml
-
-src = Path(sys.argv[1])
-dst = Path(sys.argv[2])
-main_version = sys.argv[3]
-
-data = yaml.safe_load(src.read_text(encoding="utf-8"))
-sources = data.get("content", {}).get("sources", [])
-filtered = [s for s in sources if str(s.get("start_path", "")) == main_version]
-
-if not filtered:
-    raise SystemExit(f"No content.sources entry found for main version: {main_version}")
-
-data["content"]["sources"] = filtered
-dst.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
-PY
+  python3 "$LOCAL_BUILD_SCRIPTS_DIR/generate_main_playbook.py" \
+    "$source_playbook" "$target_playbook" "$main_version"
 
   PLAYBOOK_FILE="$target_playbook"
 }
@@ -198,37 +176,8 @@ if [[ "$WATCH_MODE" == "true" ]]; then
     cp "$source_ui_bundle" "$TEMP_UI_BUNDLE_FILE"
     cp -a "$source_supplemental_dir" "$TEMP_SUPPLEMENTAL_DIR"
 
-    python3 - "$source_playbook" "$TEMP_PLAYBOOK_FILE" "$TEMP_CONTENT_REPO_DIR" <<'PY'
-import sys
-from pathlib import Path
-
-try:
-    import yaml
-except ImportError:
-    import subprocess
-    subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml", "-q"], check=True)
-    import yaml
-
-src = Path(sys.argv[1])
-dst = Path(sys.argv[2])
-temp_repo = sys.argv[3]
-
-data = yaml.safe_load(src.read_text(encoding="utf-8"))
-sources = data.get("content", {}).get("sources", [])
-for source in sources:
-    if str(source.get("url", "")) == "./antora-content":
-    source["url"] = f"./{Path(temp_repo).name}"
-
-ui = data.get("ui", {})
-bundle = ui.get("bundle", {})
-if isinstance(bundle.get("url"), str):
-    bundle["url"] = "./antora-ui-default.zip"
-
-if isinstance(ui.get("supplemental_files"), str):
-    ui["supplemental_files"] = "./supplemental-ui"
-
-dst.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
-PY
+    python3 "$LOCAL_BUILD_SCRIPTS_DIR/prepare_temp_playbook.py" \
+      "$source_playbook" "$TEMP_PLAYBOOK_FILE" "$TEMP_CONTENT_REPO_DIR"
   }
 
   run_antora_build() {
@@ -236,6 +185,10 @@ PY
     ensure_scope_playbook
     prepare_temp_content_repo
     prepare_temp_playbook
+    if [[ ! -f "$TEMP_PLAYBOOK_FILE" ]]; then
+      echo "Temporary playbook was not generated: $TEMP_PLAYBOOK_FILE"
+      return 1
+    fi
     "$ANTORA_CMD" "$TEMP_PLAYBOOK_FILE" --to-dir build/site
   }
 

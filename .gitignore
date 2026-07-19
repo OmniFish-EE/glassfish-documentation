@@ -8,8 +8,15 @@ build/
 glassfish-repo/
 glassfish-repo-tags/
 
+# External docs source clones (fetched at build time)
+arquillian-container-glassfish-repo/
+embedded-maven-plugin-repo/
+
 # Temporary build artifacts (temp git repo + temp playbooks)
 temp/
 
 # Node
 node_modules/
+
+# Python cache
+**/__pycache__/

@@ -239,11 +239,25 @@ def ensure_arquillian_repo() -> Path:
         )
     else:
         subprocess.run(
-            ["git", "fetch", "--depth", "1", "origin", "main"],
+            ["git", "fetch", "--depth", "1", "origin"],
             cwd=ARQUILLIAN_REPO_DIR, check=True, capture_output=True
         )
+
+        default_remote_ref = "origin/main"
+        try:
+            head_ref = subprocess.check_output(
+                ["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+                cwd=ARQUILLIAN_REPO_DIR,
+                text=True,
+            ).strip()
+            if head_ref:
+                default_remote_ref = head_ref
+        except subprocess.CalledProcessError:
+            # Keep fallback when remote HEAD cannot be resolved.
+            pass
+
         subprocess.run(
-            ["git", "reset", "--hard", "origin/main"],
+            ["git", "reset", "--hard", default_remote_ref],
             cwd=ARQUILLIAN_REPO_DIR, check=True, capture_output=True
         )
     return ARQUILLIAN_REPO_DIR / ARQUILLIAN_DOCS_SUBDIR
@@ -293,6 +307,182 @@ def setup_arquillian_module(out_root: Path) -> str | None:
     return ARQUILLIAN_MODULE_NAME
 
 
+# ── Embedded Maven Plugin module builder ─────────────────────────────────────
+
+EMBEDDED_PLUGIN_REPO_DIR = REPO_ROOT / "embedded-maven-plugin-repo"
+EMBEDDED_PLUGIN_REPO_URL = "https://github.com/eclipse-ee4j/glassfish-maven-embedded-plugin.git"
+EMBEDDED_PLUGIN_README = "README.md"
+EMBEDDED_PLUGIN_MODULE_NAME = "embedded-maven-plugin"
+EMBEDDED_PLUGIN_DISPLAY_NAME = "Embedded Maven Plugin"
+
+
+def ensure_embedded_plugin_repo() -> Path:
+    """Shallow-clone or update the Embedded Maven Plugin repo. Returns README.md path."""
+    if not EMBEDDED_PLUGIN_REPO_DIR.exists():
+        print("  Cloning Embedded Maven Plugin docs...")
+        subprocess.run(
+            ["git", "clone", "--depth", "1", "--filter=blob:none",
+             EMBEDDED_PLUGIN_REPO_URL, str(EMBEDDED_PLUGIN_REPO_DIR)],
+            check=True, capture_output=True
+        )
+    else:
+        subprocess.run(
+            ["git", "fetch", "--depth", "1", "origin"],
+            cwd=EMBEDDED_PLUGIN_REPO_DIR, check=True, capture_output=True
+        )
+
+        default_remote_ref = "origin/master"
+        try:
+            head_ref = subprocess.check_output(
+                ["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+                cwd=EMBEDDED_PLUGIN_REPO_DIR,
+                text=True,
+            ).strip()
+            if head_ref:
+                default_remote_ref = head_ref
+        except subprocess.CalledProcessError:
+            # Keep fallback when remote HEAD cannot be resolved.
+            pass
+
+        subprocess.run(
+            ["git", "reset", "--hard", default_remote_ref],
+            cwd=EMBEDDED_PLUGIN_REPO_DIR, check=True, capture_output=True
+        )
+    return EMBEDDED_PLUGIN_REPO_DIR / EMBEDDED_PLUGIN_README
+
+
+def slugify_anchor(text: str) -> str:
+    anchor = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return anchor or "section"
+
+
+def convert_markdown_inline(text: str) -> str:
+    """Convert a subset of inline Markdown to AsciiDoc inline syntax."""
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)",
+                  lambda m: f"<<{m.group(2)[1:]},{m.group(1)}>>" if m.group(2).startswith("#") else f"link:{m.group(2)}[{m.group(1)}]",
+                  text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"*\1*", text)
+    text = re.sub(r"`([^`]+)`", r"+\1+", text)
+    return text
+
+
+def convert_markdown_table(md_lines: list[str]) -> list[str]:
+    """Convert a Markdown table block to AsciiDoc table syntax."""
+    rows: list[list[str]] = []
+    for line in md_lines:
+        stripped = line.strip()
+        if not stripped.startswith("|") or stripped.count("|") < 2:
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if cells and all(re.fullmatch(r":?-{2,}:?", c) for c in cells):
+            continue
+        rows.append(cells)
+
+    if not rows:
+        return md_lines
+
+    out = ["|==="]
+    for row in rows:
+        out.append(" ".join(f"|{convert_markdown_inline(c)}" for c in row))
+    out.append("|===")
+    return out
+
+
+def markdown_to_asciidoc(content: str) -> str:
+    """Convert README Markdown to AsciiDoc for Antora pages."""
+    lines = content.splitlines()
+    out: list[str] = [":description: Generated from the Embedded Maven Plugin README.", ""]
+    i = 0
+    in_code = False
+
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            if not in_code:
+                lang = stripped[3:].strip()
+                out.append(f"[source,{lang}]" if lang else "[source]")
+                out.append("----")
+                in_code = True
+            else:
+                out.append("----")
+                in_code = False
+            i += 1
+            continue
+
+        if in_code:
+            out.append(line)
+            i += 1
+            continue
+
+        if stripped.startswith("|") and stripped.count("|") >= 2:
+            start = i
+            while i < len(lines) and lines[i].strip().startswith("|") and lines[i].count("|") >= 2:
+                i += 1
+            out.extend(convert_markdown_table(lines[start:i]))
+            out.append("")
+            continue
+
+        heading = re.match(r"^(#{1,6})\s+(.+)$", line)
+        if heading:
+            level = len(heading.group(1))
+            title = convert_markdown_inline(heading.group(2).strip())
+            anchor = slugify_anchor(heading.group(2).strip())
+            if level > 1:
+                out.append(f"[[{anchor}]]")
+            out.append(f"{'=' * level} {title}")
+            out.append("")
+            i += 1
+            continue
+
+        if stripped.startswith("- "):
+            out.append(f"* {convert_markdown_inline(stripped[2:])}")
+            i += 1
+            continue
+
+        if stripped == "":
+            out.append("")
+            i += 1
+            continue
+
+        out.append(convert_markdown_inline(line))
+        i += 1
+
+    return "\n".join(out).rstrip() + "\n"
+
+
+def setup_embedded_plugin_module(out_root: Path) -> str | None:
+    """Build Antora module from Embedded Maven Plugin README.md."""
+    readme_path = EMBEDDED_PLUGIN_REPO_DIR / EMBEDDED_PLUGIN_README
+    try:
+        readme_path = ensure_embedded_plugin_repo()
+    except subprocess.CalledProcessError as exc:
+        if readme_path.exists():
+            print(f"  WARN {EMBEDDED_PLUGIN_MODULE_NAME}: repo update failed; using local README ({exc})")
+        else:
+            print(f"  SKIP {EMBEDDED_PLUGIN_MODULE_NAME}: could not fetch repo ({exc})")
+            return None
+
+    if not readme_path.exists():
+        print(f"  SKIP {EMBEDDED_PLUGIN_MODULE_NAME}: README.md not found")
+        return None
+
+    module_dir = out_root / "modules" / EMBEDDED_PLUGIN_MODULE_NAME
+    pages_dir = module_dir / "pages"
+    pages_dir.mkdir(parents=True, exist_ok=True)
+
+    readme_md = readme_path.read_text(encoding="utf-8", errors="replace")
+    readme_adoc = markdown_to_asciidoc(readme_md)
+    (pages_dir / "title.adoc").write_text(readme_adoc, encoding="utf-8")
+
+    nav_content = f"* xref:{EMBEDDED_PLUGIN_MODULE_NAME}:title.adoc[{EMBEDDED_PLUGIN_DISPLAY_NAME}]\n"
+    (module_dir / "nav.adoc").write_text(nav_content, encoding="utf-8")
+
+    print(f"  OK  {EMBEDDED_PLUGIN_MODULE_NAME}: 1 pages")
+    return EMBEDDED_PLUGIN_MODULE_NAME
+
+
 # ── Index page builder ─────────────────────────────────────────────────────────
 
 INDEX_PAGE_TEMPLATE = REPO_ROOT / "templates" / "index-page.adoc"
@@ -311,20 +501,20 @@ def build_developer_tools_page() -> str:
 
 This page collects external documentation for tools and integrations that help you develop with GlassFish.
 
-== Docker
-
-* https://github.com/eclipse-ee4j/glassfish.docker/wiki[GlassFish Docker wiki]
-
-== Embedded GlassFish Maven Plugin
-
-* https://github.com/eclipse-ee4j/glassfish-maven-embedded-plugin[GlassFish Maven Embedded Plugin]
-
 == IDE Plugins
 
 * https://omnifish.ee/developers/glassfish-server/ide-plugins-for-glassfish/intellij-idea/[GlassFish in IntelliJ Idea]
 * https://omnifish.ee/developers/glassfish-server/ide-plugins-for-glassfish/eclipse-glassfish-in-visual-studio-code/[GlassFish in Visual Studio Code]
 * https://omnifish.ee/developers/glassfish-server/ide-plugins-for-glassfish/eclipse-ide/[GlassFish in Eclipse IDE]
 * https://omnifish.ee/developers/glassfish-server/ide-plugins-for-glassfish/netbeans/[GlassFish in Netbeans]
+
+== Embedded GlassFish Maven Plugin
+
+* xref:embedded-maven-plugin:title.adoc[Embedded GlassFish Maven Plugin]
+
+== Docker
+
+* https://github.com/eclipse-ee4j/glassfish.docker/wiki[GlassFish Docker wiki]
 
 == Arquillian Container
 
@@ -368,7 +558,20 @@ nav:
         if module_name:
             modules.append((module_name, display_name))
 
+    embedded_plugin_module = setup_embedded_plugin_module(out_root)
     arquillian_module = setup_arquillian_module(out_root)
+
+    # Do not silently publish unresolved xrefs in Developer Tools.
+    if not embedded_plugin_module:
+        raise RuntimeError(
+            "Embedded Maven Plugin docs module could not be generated; "
+            "aborting build to avoid broken Developer Tools links."
+        )
+    if not arquillian_module:
+        raise RuntimeError(
+            "Arquillian Container docs module could not be generated; "
+            "aborting build to avoid broken Developer Tools links."
+        )
 
     # antora.yml: only ROOT nav — all guide nav is inlined into ROOT/nav.adoc
     antora_yml = antora_yml_header  # nav already has ROOT entry
@@ -405,6 +608,12 @@ nav:
         # Insert Developer Tools + Arquillian directly after Quick Start Guide
         if guide_name == "quick-start-guide":
             root_nav_lines.append("* xref:ROOT:developer-tools.adoc[Developer Tools]\n")
+            if embedded_plugin_module:
+                emb_nav_path = out_root / "modules" / embedded_plugin_module / "nav.adoc"
+                if emb_nav_path.exists():
+                    embedded_nav = emb_nav_path.read_text(encoding="utf-8")
+                    nested_embedded_nav = re.sub(r"^(\*+) ", lambda m: f"{m.group(1)}* ", embedded_nav, flags=re.MULTILINE)
+                    root_nav_lines.append(nested_embedded_nav)
             if arquillian_module:
                 arq_nav_path = out_root / "modules" / arquillian_module / "nav.adoc"
                 if arq_nav_path.exists():
