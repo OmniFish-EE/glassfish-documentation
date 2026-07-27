@@ -1,3 +1,7 @@
 <script src="{{{uiRootPath}}}/js/vendor/lunr.js"></script>
 <script src="{{{uiRootPath}}}/js/search-ui.js" id="search-ui-script" data-site-root-path="{{{siteRootPath}}}" data-snippet-length="100" data-stylesheet="{{{uiRootPath}}}/css/search.css"></script>
+{{#if page.version}}
+<script async src="{{{siteRootPath}}}/search-index-{{page.version}}.js"></script>
+{{else}}
 <script async src="{{{siteRootPath}}}/search-index.js"></script>
+{{/if}}

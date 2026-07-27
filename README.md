@@ -82,6 +82,7 @@ This script:
 3. Transforms the sources into Antora layout (includes xref fixes)
 4. Initialises the Antora content git repo
 5. Builds the static site into `build/site/`
+6. Generates one search index per documentation version (versioned indexes)
 
 ### Serve the site
 

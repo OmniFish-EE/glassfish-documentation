@@ -179,6 +179,11 @@ prepare_temp_playbook
 
 echo "[5/5] Building Antora site"
 "$ANTORA_CMD" "$TEMP_PLAYBOOK_FILE" --to-dir build/site
+
+echo "[6/6] Generating per-version search indexes"
+python3 "$LOCAL_BUILD_SCRIPTS_DIR/generate_versioned_search_indexes.py" \
+  "$TEMP_PLAYBOOK_FILE" "$ROOT_DIR/build/site" "$ANTORA_CMD"
+
 bash "$ROOT_DIR/install_root_landing_page.sh"
 
 echo "Build completed: $ROOT_DIR/build/site"

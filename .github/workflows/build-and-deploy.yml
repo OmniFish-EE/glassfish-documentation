@@ -70,6 +70,11 @@ jobs:
       - name: Build Antora site
         run: antora antora-playbook.yml --to-dir build/site
 
+      - name: Generate per-version search indexes
+        run: |
+          python3 local-build/scripts/generate_versioned_search_indexes.py \
+            antora-playbook.yml build/site antora
+
       - name: Install OmniFish root landing page
         run: bash install_root_landing_page.sh
 
